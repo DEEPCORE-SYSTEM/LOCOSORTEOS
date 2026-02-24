@@ -1,0 +1,71 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        /*
+        |--------------------------------------------------------------------------
+        | TABLA USERS
+        |--------------------------------------------------------------------------
+        | Personas del sistema:
+        | Admins, vendedores y clientes.
+        | Los ROLES los manejará Spatie.
+        */
+
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+
+            // DATOS PERSONALES
+            $table->char('dni', 8)->unique();
+            $table->string('name');
+            $table->string('telefono', 20)->nullable();
+            $table->string('departamento', 100)->nullable();
+            $table->string('direccion')->nullable();
+
+            // LOGIN (solo si usa web)
+            $table->string('email')->nullable()->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password')->nullable();
+
+            // Diferenciar cliente web vs físico
+            $table->enum('tipo_registro', ['web', 'fisico'])->default('fisico');
+
+            // Control
+            $table->enum('estado', ['activo', 'bloqueado'])->default('activo');
+
+            $table->rememberToken();
+            $table->timestamps();
+        });
+
+        /*
+        | Laravel necesita estas tablas
+        */
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('sessions');
+    }
+};
