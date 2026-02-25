@@ -1,17 +1,28 @@
 import React, { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { 
   User, Calendar, Ticket, CheckCircle, Clock, 
-  ArrowRight, Dices, MousePointerClick, Minus, Plus, Upload 
+  ArrowRight, Dices, MousePointerClick, Minus, Plus, Upload, Loader2 
 } from 'lucide-react';
 
 export default function Checkout({ currentUser, initialTransactions = [], sorteo }) {
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'checkout'
+  const { flash } = usePage().props;
+  const [currentView, setCurrentView] = useState('dashboard'); 
   
-  // Estados Checkout
+  
   const ticketInfo = sorteo ? `${sorteo.nombre} - ${sorteo.tipo}` : '';
   const ticketPrice = sorteo?.precio_ticket ? parseFloat(sorteo.precio_ticket) : 40.00;
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    sorteo_id: sorteo?.id || '',
+    cantidad: 1,
+    modo_seleccion: 'random',
+    numeros_seleccionados: [],
+    metodo_pago: '',
+    comprobante: null,
+    total: ticketPrice
+  });
 
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [selectionMethod, setSelectionMethod] = useState('random');
@@ -25,53 +36,86 @@ export default function Checkout({ currentUser, initialTransactions = [], sorteo
 
   const handleBuyClick = () => {
     setCurrentView('checkout');
-    setTicketQuantity(1);
-    setSelectedNumbers([]);
-    setSelectionMethod('random');
+    reset();
+    setData('cantidad', 1);
+    setData('numeros_seleccionados', []);
+    setData('modo_seleccion', 'random');
+    setData('total', ticketPrice);
+    setPreviewUrl(null);
   };
 
+  const [previewUrl, setPreviewUrl] = useState(null);
+
   const handleIncreaseQty = () => {
-    if (ticketQuantity < 10) setTicketQuantity(prev => prev + 1);
+    if (data.cantidad < 10) {
+      const newQty = data.cantidad + 1;
+      setData(data => ({ ...data, cantidad: newQty, total: newQty * ticketPrice }));
+    }
   };
 
   const handleDecreaseQty = () => {
-    if (ticketQuantity > 1) {
-      setTicketQuantity(prev => prev - 1);
-      // Si reduce la cantidad y tenia numeros elegidos, recortamos la lista
-      if (selectedNumbers.length > ticketQuantity - 1) {
-        setSelectedNumbers(prev => prev.slice(0, ticketQuantity - 1));
+    if (data.cantidad > 1) {
+      const newQty = data.cantidad - 1;
+      let newNumbers = [...data.numeros_seleccionados];
+      
+      if (newNumbers.length > newQty) {
+        newNumbers = newNumbers.slice(0, newQty);
       }
+      setData(data => ({ ...data, cantidad: newQty, numeros_seleccionados: newNumbers, total: newQty * ticketPrice }));
     }
   };
 
   const toggleNumber = (numStr) => {
-    if (selectedNumbers.includes(numStr)) {
-      setSelectedNumbers(prev => prev.filter(n => n !== numStr));
+    let newNumbers = [...data.numeros_seleccionados];
+    if (newNumbers.includes(numStr)) {
+      newNumbers = newNumbers.filter(n => n !== numStr);
     } else {
-      if (selectedNumbers.length < ticketQuantity) {
-        setSelectedNumbers(prev => [...prev, numStr]);
+      if (newNumbers.length < data.cantidad) {
+        newNumbers.push(numStr);
       } else {
-        alert(`Ya has seleccionado tus ${ticketQuantity} números. Aumenta la cantidad si deseas más.`);
+        alert(`Ya has seleccionado tus ${data.cantidad} números. Aumenta la cantidad si deseas más.`);
+        return;
       }
     }
+    setData('numeros_seleccionados', newNumbers);
   };
+
+  const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setData('comprobante', file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
   const handleCheckoutSubmit = (e) => {
     e.preventDefault();
-    if (selectionMethod === 'manual' && selectedNumbers.length !== ticketQuantity) {
-      alert(`Por favor, selecciona exactamente ${ticketQuantity} números o cambia a selección al azar.`);
+    if (data.modo_seleccion === 'manual' && data.numeros_seleccionados.length !== data.cantidad) {
+      alert(`Por favor, selecciona exactamente ${data.cantidad} números o cambia a selección al azar.`);
       return;
     }
-    console.log('Procesando compra:', {
-      draw: selectedDraw,
-      qty: ticketQuantity,
-      method: selectionMethod,
-      numbers: selectionMethod === 'manual' ? selectedNumbers : 'Al azar',
-      total: ticketQuantity * ticketPrice
+    
+    if (!data.metodo_pago) {
+      alert("Por favor selecciona un método de pago.");
+      return;
+    }
+
+    if (!data.comprobante) {
+      alert("Por favor sube la captura de tu comprobante de pago.");
+      return;
+    }
+
+    post('/comprar', {
+      onSuccess: () => {
+        setCurrentView('dashboard');
+        reset();
+        setPreviewUrl(null);
+      }
     });
-    // Aquí iría el envío al backend (Inertia post a /comprar)
-    alert("Simulación: Compra enviada a validación.");
-    setCurrentView('dashboard');
   };
 
   return (
@@ -92,9 +136,21 @@ export default function Checkout({ currentUser, initialTransactions = [], sorteo
                   <p className="text-slate-500 font-medium text-sm md:text-base">Administra tus compras y boletos aquí.</p>
                 </div>
               </div>
-              <button onClick={handleBuyClick} className="w-full md:w-auto bg-amber-400 text-slate-900 font-bold px-6 py-3 rounded-xl hover:bg-amber-500 shadow-sm transition-colors flex items-center justify-center gap-2 mt-2 md:mt-0">
-                <Ticket className="w-5 h-5" /> Comprar más tickets
-              </button>
+              <div className="flex flex-col items-center md:items-end w-full md:w-auto mt-2 md:mt-0">
+                <button onClick={handleBuyClick} className="w-full md:w-auto bg-amber-400 text-slate-900 font-bold px-6 py-3 rounded-xl hover:bg-amber-500 shadow-sm transition-colors flex items-center justify-center gap-2">
+                  <Ticket className="w-5 h-5" /> Comprar más tickets
+                </button>
+                 {flash?.success && (
+                  <div className="mt-4 text-emerald-600 font-bold text-sm bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
+                    {flash.success}
+                  </div>
+                 )}
+                 {flash?.error && (
+                  <div className="mt-4 text-red-600 font-bold text-sm bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+                    {flash.error}
+                  </div>
+                 )}
+              </div>
             </div>
 
             {/* Tabla de Transacciones */}
@@ -200,10 +256,10 @@ export default function Checkout({ currentUser, initialTransactions = [], sorteo
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Método de selección</label>
                         <div className="flex bg-slate-200 p-1.5 rounded-xl h-[56px]">
-                          <button type="button" onClick={() => setSelectionMethod('random')} className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 px-2 md:px-3 rounded-lg font-bold text-xs md:text-sm transition-all ${selectionMethod === 'random' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                          <button type="button" onClick={() => setData('modo_seleccion', 'random')} className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 px-2 md:px-3 rounded-lg font-bold text-xs md:text-sm transition-all ${data.modo_seleccion === 'random' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                             <Dices className="w-4 h-4" /> Al azar
                           </button>
-                          <button type="button" onClick={() => setSelectionMethod('manual')} className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 px-2 md:px-3 rounded-lg font-bold text-xs md:text-sm transition-all ${selectionMethod === 'manual' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                          <button type="button" onClick={() => setData('modo_seleccion', 'manual')} className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 px-2 md:px-3 rounded-lg font-bold text-xs md:text-sm transition-all ${data.modo_seleccion === 'manual' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                             <MousePointerClick className="w-4 h-4" /> Elegir
                           </button>
                         </div>
@@ -211,18 +267,18 @@ export default function Checkout({ currentUser, initialTransactions = [], sorteo
                     </div>
 
                     {/* Grilla de números si es manual */}
-                    {selectionMethod === 'manual' && (
+                    {data.modo_seleccion === 'manual' && (
                       <div className="mt-4 border-t border-slate-200 pt-5">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-3 gap-2 md:gap-0">
                           <p className="text-sm font-bold text-slate-700">Elige tus números (Muestra interactiva):</p>
                           <span className="text-xs font-bold px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-lg shrink-0">
-                            {selectedNumbers.length} de {ticketQuantity} elegidos
+                            {data.numeros_seleccionados.length} de {data.cantidad} elegidos
                           </span>
                         </div>
                         <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
                           {Array.from({length: 30}).map((_, i) => {
                             const num = String(i + 1).padStart(3, '0');
-                            const isSelected = selectedNumbers.includes(num);
+                            const isSelected = data.numeros_seleccionados.includes(num);
                             return (
                               <button 
                                 type="button"
@@ -235,9 +291,9 @@ export default function Checkout({ currentUser, initialTransactions = [], sorteo
                             );
                           })}
                         </div>
-                        {selectedNumbers.length > 0 && (
+                        {data.numeros_seleccionados.length > 0 && (
                           <div className="mt-4 bg-emerald-50 rounded-lg p-3 border border-emerald-100">
-                             <p className="text-xs text-emerald-800 font-medium leading-relaxed">Números seleccionados: <br/><strong className="text-emerald-900 text-sm">{selectedNumbers.join(', ')}</strong></p>
+                             <p className="text-xs text-emerald-800 font-medium leading-relaxed">Números seleccionados: <br/><strong className="text-emerald-900 text-sm">{data.numeros_seleccionados.join(', ')}</strong></p>
                           </div>
                         )}
                       </div>
@@ -246,8 +302,8 @@ export default function Checkout({ currentUser, initialTransactions = [], sorteo
 
                   {/* Resumen Total */}
                   <div className="mt-4 bg-[#FFF4F4] border-2 border-[#FFE0E0] p-4 md:p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-2 md:gap-0">
-                    <span className="font-bold text-red-700 text-center md:text-left">Total a Pagar ({ticketQuantity} ticket{ticketQuantity > 1 ? 's' : ''}):</span>
-                    <span className="text-3xl font-black text-red-700">S/ {(ticketQuantity * ticketPrice).toFixed(2)}</span>
+                    <span className="font-bold text-red-700 text-center md:text-left">Total a Pagar ({data.cantidad} ticket{data.cantidad > 1 ? 's' : ''}):</span>
+                    <span className="text-3xl font-black text-red-700">S/ {(data.cantidad * ticketPrice).toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -303,15 +359,15 @@ export default function Checkout({ currentUser, initialTransactions = [], sorteo
                     Realiza el pago
                   </h3>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="border-2 border-[#742284] rounded-2xl p-5 text-center bg-white relative overflow-hidden group hover:bg-[#742284]/5 transition-colors">
-                      <div className="absolute top-0 right-0 bg-[#742284] text-white text-[10px] font-black tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm">YAPE</div>
+                    <div onClick={() => setData('metodo_pago', 'yape')} className={`cursor-pointer border-2 ${data.metodo_pago === 'yape' ? 'border-[#742284] bg-[#742284]/10 shadow-md ring-2 ring-[#742284]/50 scale-105' : 'border-slate-200 bg-white hover:border-[#742284]/50'} rounded-2xl p-5 text-center relative overflow-hidden transition-all duration-200`}>
+                      <div className={`absolute top-0 right-0 ${data.metodo_pago === 'yape' ? 'bg-[#742284]' : 'bg-slate-300'} text-white text-[10px] font-black tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm transition-colors`}>YAPE</div>
                       <p className="text-slate-500 text-xs font-bold mb-1 mt-2 uppercase tracking-wide">Número oficial</p>
-                      <p className="text-3xl font-black text-[#742284] tracking-tight">987 654 321</p>
+                      <p className={`text-3xl font-black ${data.metodo_pago === 'yape' ? 'text-[#742284]' : 'text-slate-700'} tracking-tight`}>987 654 321</p>
                     </div>
-                    <div className="border-2 border-[#00E0C6] rounded-2xl p-5 text-center bg-white relative overflow-hidden group hover:bg-[#00E0C6]/5 transition-colors">
-                      <div className="absolute top-0 right-0 bg-[#00E0C6] text-[#0A2240] text-[10px] font-black tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm">PLIN</div>
+                    <div onClick={() => setData('metodo_pago', 'plin')} className={`cursor-pointer border-2 ${data.metodo_pago === 'plin' ? 'border-[#00E0C6] bg-[#00E0C6]/10 shadow-md ring-2 ring-[#00E0C6]/50 scale-105' : 'border-slate-200 bg-white hover:border-[#00E0C6]/50'} rounded-2xl p-5 text-center relative overflow-hidden transition-all duration-200`}>
+                      <div className={`absolute top-0 right-0 ${data.metodo_pago === 'plin' ? 'bg-[#00E0C6]' : 'bg-slate-300'} text-white text-[10px] font-black tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm transition-colors`}>PLIN</div>
                       <p className="text-slate-500 text-xs font-bold mb-1 mt-2 uppercase tracking-wide">Número oficial</p>
-                      <p className="text-3xl font-black text-[#0A2240] tracking-tight">987 654 321</p>
+                      <p className={`text-3xl font-black ${data.metodo_pago === 'plin' ? 'text-[#0A2240]' : 'text-slate-700'} tracking-tight`}>987 654 321</p>
                     </div>
                   </div>
                   <div className="bg-red-50 text-red-700 border border-red-100 p-3 rounded-xl mt-4 text-center">
@@ -330,18 +386,30 @@ export default function Checkout({ currentUser, initialTransactions = [], sorteo
                     Sube tu boucher
                   </h3>
                   <div className="relative border-2 border-dashed border-emerald-300 rounded-2xl p-8 md:p-10 text-center bg-emerald-50/50 hover:bg-emerald-50 transition-colors cursor-pointer group">
-                    <div className="bg-white w-16 h-16 rounded-full shadow-md flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:-translate-y-1 transition-all">
-                      <Upload className="w-8 h-8 text-emerald-500" />
-                    </div>
-                    <p className="font-black text-emerald-800 mb-1 text-lg">Toca aquí para subir captura</p>
-                    <p className="text-xs text-emerald-600 font-medium">Formatos soportados: JPG, PNG o PDF (Máx. 5MB)</p>
-                    <input type="file" required className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                    {previewUrl ? (
+                        <div className="relative">
+                            <img src={previewUrl} alt="Comprobante" className="max-h-64 mx-auto rounded-lg shadow-md object-contain" />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-lg">
+                                <span className="text-white font-bold bg-black/50 px-3 py-1.5 rounded-md">Cambiar Imagen</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="bg-white w-16 h-16 rounded-full shadow-md flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:-translate-y-1 transition-all">
+                                <Upload className="w-8 h-8 text-emerald-500" />
+                            </div>
+                            <p className="font-black text-emerald-800 mb-1 text-lg">Toca aquí para subir captura</p>
+                            <p className="text-xs text-emerald-600 font-medium">Formatos soportados: JPG, PNG o PDF (Máx. 5MB)</p>
+                        </>
+                    )}
+                    <input type="file" required onChange={handleFileChange} accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                   </div>
+                  {errors.comprobante && <p className="text-red-500 text-sm mt-2">{errors.comprobante}</p>}
                 </div>
 
-                <button type="submit" className="w-full bg-[#25D366] hover:bg-[#20B858] text-white font-black text-xl py-4 md:py-5 rounded-2xl shadow-[0_6px_0_#1DA851] active:shadow-[0_0px_0_#1DA851] active:translate-y-[6px] transition-all flex items-center justify-center gap-2 group mt-6">
-                  <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                  Confirmar Participación - S/ {(ticketQuantity * ticketPrice).toFixed(2)}
+                <button disabled={processing} type="submit" className="w-full bg-[#25D366] hover:bg-[#20B858] disabled:opacity-75 disabled:cursor-not-allowed text-white font-black text-xl py-4 md:py-5 rounded-2xl shadow-[0_6px_0_#1DA851] active:shadow-[0_0px_0_#1DA851] active:translate-y-[6px] transition-all flex items-center justify-center gap-2 group mt-6">
+                  {processing ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />}
+                  {processing ? 'Enviando comprobante...' : `Confirmar Participación - S/ ${(data.cantidad * ticketPrice).toFixed(2)}`}
                 </button>
               </form>
             </div>

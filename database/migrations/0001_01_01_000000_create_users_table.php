@@ -20,22 +20,22 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
 
-            // DATOS PERSONALES
+            
             $table->char('dni', 8)->unique();
             $table->string('name');
             $table->string('telefono', 20)->nullable();
             $table->string('departamento', 100)->nullable();
             $table->string('direccion')->nullable();
 
-            // LOGIN (solo si usa web)
+            
             $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
 
-            // Diferenciar cliente web vs físico
+            
             $table->enum('tipo_registro', ['web', 'fisico'])->default('fisico');
 
-            // Control
+            
             $table->enum('estado', ['activo', 'bloqueado'])->default('activo');
 
             $table->rememberToken();

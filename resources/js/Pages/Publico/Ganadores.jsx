@@ -1,28 +1,27 @@
 import React, { useState } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
-import { Head } from '@inertiajs/react';
-import { ArrowLeft, Trophy, ChevronRight } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { ArrowLeft, Trophy, ChevronRight, Search } from 'lucide-react';
 
-export default function Ganadores() {
+export default function Ganadores({ ganadores = [], filters = {} }) {
   const [winnersTab, setWinnersTab] = useState('reciente');
   const [filterCategory, setFilterCategory] = useState('Todos');
   const [filterLocation, setFilterLocation] = useState('Todas las ciudades');
+  const [searchTerm, setSearchTerm] = useState(filters.search || '');
 
-  // Datos de ejemplo basados en el prototipo original. 
-  // TODO: Dinamizar esto pasándole datos desde el backend usando props.
   const locationsList = ['Todas las ciudades', 'Lima', 'Arequipa', 'Trujillo', 'Chiclayo'];
-  const grandWinners = [{ name: 'Carlos Mendoza' }];
-  const allWinners = [
-    { id: 1, name: 'Carlos Mendoza', initial: 'C', ticket: '0984', prize: 'Toyota Hilux 2026', type: 'CARRO', location: 'Lima' },
-    { id: 2, name: 'Ana Torres', initial: 'A', ticket: '3412', prize: 'Moto Pulsar', type: 'MOTO', location: 'Arequipa' },
-    { id: 3, name: 'Luis Ramirez', initial: 'L', ticket: '8871', prize: 'S/ 5,000 Efectivo', type: 'EFECTIVO', location: 'Trujillo' },
-    { id: 4, name: 'Sofía Castro', initial: 'S', ticket: '1022', prize: 'iPhone 17 Plus', type: 'SMARTPHONE', location: 'Lima' },
-  ];
+  const grandWinners = []; 
 
-  const filteredWinners = allWinners.filter(w => {
-    const matchCat = filterCategory === 'Todos' || w.type === filterCategory;
-    const matchLoc = filterLocation === 'Todas las ciudades' || w.location === filterLocation;
-    return matchCat && matchLoc;
+  const handleSearch = (e) => {
+    e.preventDefault();
+    router.get('/ganadores', { search: searchTerm }, { preserveState: true, replace: true });
+  };
+
+  const filteredWinners = ganadores.filter(w => {
+    
+    
+    
+    return true; 
   });
 
   return (
@@ -50,9 +49,31 @@ export default function Ganadores() {
             <h2 className="text-5xl md:text-7xl font-black text-[#0A2240] uppercase italic mb-4">
               ¡GANADORES!
             </h2>
-            <p className="text-slate-600 font-medium text-lg max-w-2xl mx-auto">
+            <p className="text-slate-600 font-medium text-lg max-w-2xl mx-auto mb-8">
               ¡Felicitamos a todos los afortunados ganadores de nuestros sorteos! Aquí podrás verificar la transparencia de cada entrega.
             </p>
+
+            {/* Búsqueda por DNI */}
+            <form onSubmit={handleSearch} className="max-w-xl mx-auto flex gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input 
+                        type="text" 
+                        placeholder="Buscar por DNI o N° de Ticket"
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 font-medium"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <button type="submit" className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-6 py-3 rounded-xl shadow-sm transition-colors">
+                    Buscar
+                </button>
+                {filters.search && (
+                    <button type="button" onClick={() => { setSearchTerm(''); router.get('/ganadores'); }} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-3 rounded-xl shadow-sm transition-colors">
+                        X
+                    </button>
+                )}
+            </form>
           </div>
 
           {/* RESUMEN DE PREMIOS */}
@@ -109,37 +130,27 @@ export default function Ganadores() {
             {filteredWinners.map((winner) => (
               <div key={winner.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 relative overflow-hidden flex flex-col hover:shadow-md hover:border-emerald-200 transition-all group">
                 <div className="flex justify-between items-center mb-4">
-                  <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-wider py-1 ${winner.type === 'CARRO' ? 'bg-emerald-100 text-emerald-800' :
-                      winner.type === 'MOTO' ? 'bg-amber-100 text-amber-800' :
-                        winner.type === 'EFECTIVO' ? 'bg-green-100 text-green-800' :
-                          'bg-slate-100 text-slate-800'
-                    }`}>
-                    {winner.type}
+                  <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-wider bg-emerald-100 text-emerald-800">
+                    Sorteo Finalizado
                   </span>
-                  <span className="text-xs font-bold text-slate-400">{winner.ticket}</span>
+                  <span className="text-xs font-bold text-slate-400">N° {winner.ticket}</span>
                 </div>
 
                 <div className="flex items-center gap-3 mb-5">
                   <div className="w-12 h-12 shrink-0 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-xl font-black text-slate-400 group-hover:bg-amber-400 group-hover:text-slate-900 group-hover:border-amber-400 transition-colors">
-                    {winner.initial}
+                    {winner.user.charAt(0)}
                   </div>
                   <div className="overflow-hidden">
-                    <p className="font-bold text-slate-800 text-sm truncate leading-tight">{winner.name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{winner.location}</p>
+                    <p className="font-bold text-slate-800 text-sm truncate leading-tight">{winner.user}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{winner.sorteo}</p>
                   </div>
                 </div>
 
                 <div className="mt-auto bg-[#F4F6F9] border border-slate-100 p-3 rounded-xl text-center">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Premio</p>
-                  <p className="font-black text-slate-900 text-sm">{winner.prize}</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Premio Ganado</p>
+                  <p className="font-black text-slate-900 text-sm">{winner.premio}</p>
+                  <p className="text-[9px] text-slate-400 mt-1">DNI Oculto: ••••{winner.dni.slice(-4)} | Fecha: {winner.fecha}</p>
                 </div>
-
-                {/* Etiqueta de Premio Mayor Condicional */}
-                {grandWinners.some(g => g.name === winner.name) && (
-                  <div className="absolute top-2 left-2 bg-amber-400 text-slate-900 text-[10px] font-black px-2 py-1 rounded shadow-sm opacity-90">
-                    Premio Mayor
-                  </div>
-                )}
               </div>
             ))}
           </div>

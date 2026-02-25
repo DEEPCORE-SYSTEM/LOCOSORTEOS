@@ -2,18 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Ticket, AlertTriangle, ShieldCheck, Car, Smartphone, Banknote, Menu, X, ChevronRight, ChevronLeft, Trophy, Megaphone, Users, Facebook, MessageCircle, Image as ImageIcon, LogOut, User, Calendar, CheckCircle, Clock, Upload, ArrowLeft, Minus, Plus, Dices, MousePointerClick, Send, BellRing, LayoutDashboard, Check, XCircle, Edit, Trash2, Eye, Search, FileText, Settings, LineChart, Sprout, PlayCircle, Download, QrCode, Scissors, Loader2 } from 'lucide-react';
 
 export default function App() {
-  // Estados Globales
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'login', 'dashboard', 'checkout', 'broadcast', 'winners', 'admin-dashboard', 'admin-sorteos', 'admin-nuevo-sorteo', 'admin-tickets', 'admin-lista-tickets', 'admin-talonario', 'admin-users', 'admin-content', 'admin-ejecucion'
+  const [currentView, setCurrentView] = useState('home'); 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [intendedView, setIntendedView] = useState('dashboard');
 
-  // Estados para el login
+  
   const [loginUser, setLoginUser] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Estados para el registro de usuarios (Consulta DNI)
+  
   const [regDni, setRegDni] = useState('');
   const [regName, setRegName] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -21,10 +21,10 @@ export default function App() {
   const [regPassword, setRegPassword] = useState('');
   const [isConsultingDni, setIsConsultingDni] = useState(false);
 
-  // Estado para almacenar los datos del usuario logueado
+  
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Función para simular consulta a API de RENIEC/DNI
+  
   const handleConsultarDni = () => {
     if (regDni.length !== 8) {
       alert('Por favor ingresa un DNI válido de 8 dígitos.');
@@ -33,38 +33,38 @@ export default function App() {
     setIsConsultingDni(true);
     setRegName('');
 
-    // Simulación de retraso de red (API REST)
+    
     setTimeout(() => {
       setIsConsultingDni(false);
-      // Extraemos un nombre falso dependiendo del DNI ingresado (simulación)
+      
       const nombresSimulados = ['JUAN CARLOS PEREZ GOMEZ', 'MARIA FERNANDA SILVA RIOS', 'LUIS ALBERTO TAPIA CONDORI', 'ANA LUCIA MENDOZA VARGAS', 'CARLOS ENRIQUE FLORES CHUQUIMIA'];
       const nombreAleatorio = nombresSimulados[Math.floor(Math.random() * nombresSimulados.length)];
       setRegName(nombreAleatorio);
     }, 1500);
   };
 
-  // Estado para el contador regresivo y carrusel de fondo
+  
   const [timeLeft, setTimeLeft] = useState({ meses: 0, dias: 0, horas: 0, minutos: 0, segundos: 0 });
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
 
-  // Imágenes que rotarán de fondo (Agronomía + Vehículos)
+  
   const heroBackgrounds = [
-    'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&q=80&w=1920', // Campo agrícola con maquinaria
-    'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&q=80&w=1920', // Toyota Hilux
-    'https://images.unsplash.com/photo-1592982537447-6f2a6a0c5980?auto=format&fit=crop&q=80&w=1920'  // Cultivos verdes
+    'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&q=80&w=1920', 
+    'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&q=80&w=1920', 
+    'https://images.unsplash.com/photo-1592982537447-6f2a6a0c5980?auto=format&fit=crop&q=80&w=1920'  
   ];
 
-  // Efecto para cambiar el fondo automáticamente
+  
   useEffect(() => {
     const bgTimer = setInterval(() => {
       setCurrentBgIndex((prev) => (prev + 1) % heroBackgrounds.length);
-    }, 5000); // Cambia cada 5 segundos
+    }, 5000); 
     return () => clearInterval(bgTimer);
   }, [heroBackgrounds.length]);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      // Fecha objetivo del sorteo (28 de febrero de 2026 a las 20:00:00)
+      
       const targetDate = new Date('2026-02-28T20:00:00');
       const now = new Date();
       const difference = targetDate.getTime() - now.getTime();
@@ -83,7 +83,7 @@ export default function App() {
       return newTimeLeft;
     };
 
-    // Inicializar inmediatamente y luego cada segundo
+    
     setTimeLeft(calculateTimeLeft());
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
@@ -92,19 +92,19 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Estados de Compra
+  
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [selectionMethod, setSelectionMethod] = useState('random');
   const [selectedDraw, setSelectedDraw] = useState('Sorteo 28 de Febrero - General');
   const [selectedNumbers, setSelectedNumbers] = useState([]);
   const carouselRef = useRef(null);
 
-  // Estados de Vista de Ganadores
+  
   const [winnersTab, setWinnersTab] = useState('14feb');
   const [filterCategory, setFilterCategory] = useState('Todos');
   const [filterLocation, setFilterLocation] = useState('Todos los departamentos');
 
-  // DATOS PÚBLICOS
+  
   const prizes = [
     { id: 1, qty: '1', name: 'FORD - TERRITORY', type: 'Camioneta', image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&q=80&w=600' },
     { id: 2, qty: '1', name: 'Toyota Avanza', type: 'Camioneta', image: 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?auto=format&fit=crop&q=80&w=600' },
@@ -161,7 +161,7 @@ export default function App() {
     { id: 3, date: '15 Feb 2026 - 11:00 AM', title: '🎁 SORTEO RELÁMPAGO', content: 'Hoy sorteamos 5 fajos de S/1,200 EXCLUSIVAMENTE entre todos los que compren 3 tickets o más antes de las 6:00 PM. ¡Participa ya!', type: 'promo' }
   ];
 
-  // DATOS ADMINISTRATIVOS
+  
   const [adminPendingTickets, setAdminPendingTickets] = useState([
     { id: 'TX-1001', user: 'Carlos Mendoza', dni: '72345678', qty: 2, total: 80, date: '21 Feb 2026 10:30 AM', status: 'pending', method: 'YAPE' },
     { id: 'TX-1002', user: 'Ana Silva', dni: '45678912', qty: 1, total: 40, date: '21 Feb 2026 10:15 AM', status: 'pending', method: 'PLIN' },
@@ -169,7 +169,7 @@ export default function App() {
     { id: 'TX-1004', user: 'Luis Ramirez', dni: '98765432', qty: 3, total: 120, date: '21 Feb 2026 08:20 AM', status: 'pending', method: 'TRANSFERENCIA' },
   ]);
 
-  // Lista simulada de usuarios registrados
+  
   const [adminUsers, setAdminUsers] = useState([
     { id: 'U-1001', name: 'María Perez', dni: '74125896', phone: '987654321', date: '10 Ene 2026', totalTickets: 15, status: 'activo', draws: ['Gran Sorteo 28 de Febrero', 'Sorteo 31 de Enero'] },
     { id: 'U-1002', name: 'Carlos Mendoza', dni: '72345678', phone: '912345678', date: '12 Ene 2026', totalTickets: 2, status: 'activo', draws: ['Gran Sorteo 28 de Febrero'] },
@@ -178,12 +178,12 @@ export default function App() {
     { id: 'U-1005', name: 'Jorge Tapia', dni: '12345678', phone: '911222333', date: '21 Feb 2026', totalTickets: 10, status: 'activo', draws: ['Gran Sorteo 28 de Febrero'] },
   ]);
 
-  // Estados de filtro para la vista de Usuarios
+  
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('todos');
   const [userDrawFilter, setUserDrawFilter] = useState('todos');
 
-  // Filtrado dinámico de usuarios
+  
   const filteredAdminUsers = adminUsers.filter(user => {
     const matchSearch = user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) || user.dni.includes(userSearchQuery) || user.phone.includes(userSearchQuery);
     const matchStatus = userStatusFilter === 'todos' ? true :
@@ -194,7 +194,7 @@ export default function App() {
     return matchSearch && matchStatus && matchDraw;
   });
 
-  // Funciones de gestión de usuarios
+  
   const handleToggleUserStatus = (userId, currentStatus, userName) => {
     const newStatus = currentStatus === 'activo' ? 'baneado' : 'activo';
     const actionText = newStatus === 'baneado' ? `¿Estás seguro que deseas BANEAR a ${userName}? No podrá iniciar sesión ni comprar tickets.` : `¿Deseas REACTIVAR la cuenta de ${userName}?`;
@@ -206,7 +206,7 @@ export default function App() {
     }
   };
 
-  // Lista simulada de todos los tickets generados (RF-AD11)
+  
   const allGeneratedTickets = [
     { number: '0045', txId: 'TX-0990', user: 'María Perez', dni: '74125896', phone: '987654321', draw: 'Gran Sorteo 28 de Febrero', status: 'Vendido', date: '21 Feb 2026 08:00 AM', location: 'Lima' },
     { number: '1023', txId: 'TX-0990', user: 'María Perez', dni: '74125896', phone: '987654321', draw: 'Gran Sorteo 28 de Febrero', status: 'Vendido', date: '21 Feb 2026 08:00 AM', location: 'Lima' },
@@ -215,18 +215,18 @@ export default function App() {
     { number: '1005', txId: 'TX-0800', user: 'Carlos Mendoza', dni: '72345678', phone: '912345678', draw: 'Sorteo 31 de Enero', status: 'Histórico', date: '15 Ene 2026 10:00 AM', location: 'Arequipa' },
   ];
 
-  // Datos simulados para el Talonario
+  
   const [offlineSaleModal, setOfflineSaleModal] = useState(false);
   const [selectedOfflineTicket, setSelectedOfflineTicket] = useState('');
-  const [exportModalOpen, setExportModalOpen] = useState(false); // Estado para el modal de exportación
+  const [exportModalOpen, setExportModalOpen] = useState(false); 
 
-  // ================= ESTADOS PARA EL MÓDULO DE EJECUCIÓN DE SORTEO =================
+  
   const [execDraw, setExecDraw] = useState('');
   const [execPrize, setExecPrize] = useState('');
-  const [execCondition, setExecCondition] = useState('1'); // 1 = gana al primer intento, 3 = gana al 3er intento
-  const [execAttempt, setExecAttempt] = useState(1); // intento actual (para cuando es al 3er intento)
+  const [execCondition, setExecCondition] = useState('1'); 
+  const [execAttempt, setExecAttempt] = useState(1); 
 
-  // Inventario dinámico de premios para la sesión actual
+  
   const [availablePrizes, setAvailablePrizes] = useState([
     { id: 'p1', name: 'Camioneta Toyota Hilux 2026', qty: 1 },
     { id: 'p2', name: 'Moto Dominar 400', qty: 3 },
@@ -236,10 +236,10 @@ export default function App() {
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [currentSpinNumber, setCurrentSpinNumber] = useState('0000');
-  const [drawnTicket, setDrawnTicket] = useState(null); // El ticket que salió de la ruleta
-  const [drawnHistory, setDrawnHistory] = useState([]); // Array de tickets ya sacados (al agua o ganadores)
+  const [drawnTicket, setDrawnTicket] = useState(null); 
+  const [drawnHistory, setDrawnHistory] = useState([]); 
 
-  // Lista de tickets válidos para el sorteo seleccionado
+  
   const validTicketsForDraw = allGeneratedTickets.filter(t => t.draw === execDraw && t.status === 'Vendido' && !drawnHistory.some(h => h.number === t.number));
 
   const startDigitalDraw = () => {
@@ -256,13 +256,13 @@ export default function App() {
     setDrawnTicket(null);
     let counter = 0;
 
-    // Efecto visual de ruleta
+    
     const spinInterval = setInterval(() => {
       const randomDisplay = String(Math.floor(Math.random() * 9999)).padStart(4, '0');
       setCurrentSpinNumber(randomDisplay);
       counter++;
 
-      // Detener a los 3 segundos
+      
       if (counter > 60) {
         clearInterval(spinInterval);
         const finalTicket = validTicketsForDraw[Math.floor(Math.random() * validTicketsForDraw.length)];
@@ -283,7 +283,7 @@ export default function App() {
     setDrawnHistory([newEntry, ...drawnHistory]);
 
     if (isWinner) {
-      // Reducir el inventario del premio sorteado automáticamente
+      
       setAvailablePrizes(prevPrizes =>
         prevPrizes.map(p =>
           p.name === execPrize ? { ...p, qty: p.qty - 1 } : p
@@ -291,26 +291,26 @@ export default function App() {
       );
 
       alert(`¡GANADOR REGISTRADO!\nTicket: ${drawnTicket.number}\nNombre: ${drawnTicket.user}\nPremio: ${execPrize}`);
-      // Reiniciar intentos para el próximo premio
+      
       setExecAttempt(1);
       setExecPrize('');
     } else {
-      // Avanzar al siguiente intento
+      
       setExecAttempt(prev => prev + 1);
     }
 
     setDrawnTicket(null);
     setCurrentSpinNumber('0000');
   };
-  // =================================================================================
+  
 
-  // Generar ticket aleatorio para venta manual (Talonario)
+  
   const handleGenerateRandomOffline = () => {
-    // Array simulado de tickets no disponibles según nuestra grilla del talonario
+    
     const unavailableTickets = [12, 44, 88, 105, 45, 46, 50, 51, 52, 53, 54, 55, 56, 57, 58];
     const availablePool = [];
 
-    // Suponiendo un pool de 1000 tickets para el ejemplo (0000 - 0999)
+    
     for (let i = 0; i < 1000; i++) {
       if (!unavailableTickets.includes(i)) {
         availablePool.push(i);
@@ -325,12 +325,12 @@ export default function App() {
     }
   };
 
-  // Estados para el Modal de Rechazo
+  
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [ticketToReject, setTicketToReject] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  // Estado para las filas dinámicas de premios en la creación de sorteos
+  
   const [prizeRows, setPrizeRows] = useState([
     { id: 1, qty: 1, type: 'vehiculo', desc: '' }
   ]);
@@ -356,7 +356,7 @@ export default function App() {
     alert(`❌ Pago ${ticketToReject.id} RECHAZADO.\nMotivo: ${rejectReason}\nNo se han generado tickets y los números reservados han sido liberados.`);
   };
 
-  // FUNCIONES DE NAVEGACIÓN Y COMPRA
+  
   const handleTicketsClick = () => {
     if (isLoggedIn) {
       setCurrentView('dashboard');
@@ -383,7 +383,7 @@ export default function App() {
     e.preventDefault();
     setIsLoggedIn(true);
 
-    // Guardamos los datos del usuario para no pedirlos de nuevo en la compra
+    
     if (!isLoginMode) {
       setCurrentUser({
         name: regName || '',
@@ -392,7 +392,7 @@ export default function App() {
         dept: regDept || ''
       });
     } else {
-      // Datos simulados si el usuario solo inicia sesión
+      
       setCurrentUser({
         name: 'JUAN CARLOS PEREZ GOMEZ',
         dni: loginUser || '72345678',
@@ -454,7 +454,7 @@ export default function App() {
     }
   };
 
-  // Funciones para gestionar filas de premios
+  
   const handleAddPrizeRow = () => {
     setPrizeRows([...prizeRows, { id: Date.now(), qty: 1, type: 'vehiculo', desc: '' }]);
   };
@@ -467,7 +467,7 @@ export default function App() {
     setPrizeRows(prizeRows.filter(row => row.id !== id));
   };
 
-  // RENDERIZADO DEL PANEL ADMINISTRATIVO (DASHBOARD)
+  
   if (currentView.startsWith('admin-')) {
     return (
       <div className="min-h-screen bg-[#F4F6F9] flex flex-col md:flex-row font-sans text-slate-900">
@@ -1302,11 +1302,11 @@ export default function App() {
 
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-2">
                   {Array.from({ length: 120 }).map((_, i) => {
-                    // Simulando diferentes estados para la demostración
+                    
                     let status = 'libre';
                     if (i === 12 || i === 44 || i === 88 || i === 105) status = 'vendido';
                     if (i === 45 || i === 46) status = 'reservado';
-                    if (i >= 50 && i <= 58) status = 'impreso'; // Lote impreso en calle
+                    if (i >= 50 && i <= 58) status = 'impreso'; 
 
                     const num = String(i).padStart(4, '0');
 
@@ -2086,7 +2086,7 @@ export default function App() {
     );
   }
 
-  // RENDERIZADO DEL PORTAL PÚBLICO (CLIENTE)
+  
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 md:pb-0">
 
@@ -2466,7 +2466,7 @@ export default function App() {
                       required
                       maxLength="8"
                       value={regDni || ''}
-                      onChange={(e) => setRegDni(e.target.value.replace(/\D/g, ''))} // Solo números
+                      onChange={(e) => setRegDni(e.target.value.replace(/\D/g, ''))} 
                       className="w-full px-4 py-3 rounded-xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:outline-none focus:ring-0 focus:border-emerald-500 transition-all font-mono font-bold text-slate-700 tracking-widest"
                       placeholder="Ej. 72345678"
                     />
@@ -2489,7 +2489,7 @@ export default function App() {
                     required
                     value={regName || ''}
                     onChange={(e) => setRegName(e.target.value)}
-                    readOnly={!!regName} // Se vuelve de solo lectura si la API lo llena
+                    readOnly={!!regName} 
                     className={`w-full px-4 py-3 rounded-xl border-2 transition-all font-bold ${regName ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-100 text-slate-700 focus:bg-white focus:border-emerald-500'}`}
                     placeholder="Se autocompletará con tu DNI"
                   />
@@ -2546,7 +2546,7 @@ export default function App() {
               <button
                 onClick={() => {
                   setIsLoginMode(!isLoginMode);
-                  // Reseteamos campos al cambiar de modo para evitar conflictos
+                  
                   setLoginUser('');
                   setLoginPassword('');
                   setRegDni('');

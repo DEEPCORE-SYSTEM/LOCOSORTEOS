@@ -15,7 +15,7 @@ class SorteoEjecucionController extends Controller
 
         DB::transaction(function () use ($sorteo) {
 
-            // Tickets que participan (solo vendidos)
+            
             $ticketsVendidos = Ticket::where('sorteo_id', $sorteo->id)
                 ->where('estado', 'vendido')
                 ->pluck('id')
@@ -25,7 +25,7 @@ class SorteoEjecucionController extends Controller
                 abort(400, 'No hay tickets vendidos.');
             }
 
-            shuffle($ticketsVendidos); // aleatoriedad real
+            shuffle($ticketsVendidos); 
 
             foreach ($sorteo->premios as $index => $premio) {
 

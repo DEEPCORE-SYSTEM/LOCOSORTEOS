@@ -3,7 +3,7 @@ import { router } from "@inertiajs/react";
 
 export default function Index({ sorteo, tickets: initialTickets }) {
 
-    // ⚡ tickets ahora son dinámicos (para tiempo real)
+    
     const [tickets, setTickets] = useState(initialTickets);
 
     const [seleccionados, setSeleccionados] = useState([]);
@@ -14,7 +14,7 @@ export default function Index({ sorteo, tickets: initialTickets }) {
         telefono: ''
     });
 
-    // 🎧 ESCUCHAR VENTAS EN TIEMPO REAL
+    
     useEffect(() => {
 
         window.Echo.channel('sorteo')
@@ -28,7 +28,7 @@ export default function Index({ sorteo, tickets: initialTickets }) {
                     )
                 );
 
-                // Si el usuario tenía ese número seleccionado → lo quitamos
+                
                 setSeleccionados(prev => prev.filter(id => id !== e.ticketId));
             });
 
@@ -38,7 +38,7 @@ export default function Index({ sorteo, tickets: initialTickets }) {
 
     }, []);
 
-    // Seleccionar / deseleccionar número
+    
     const toggle = (id) => {
         setSeleccionados(prev =>
             prev.includes(id)
@@ -47,7 +47,7 @@ export default function Index({ sorteo, tickets: initialTickets }) {
         );
     };
 
-    // Comprar
+    
     const comprar = () => {
 
         if (!form.nombre || !form.dni || !form.telefono) {

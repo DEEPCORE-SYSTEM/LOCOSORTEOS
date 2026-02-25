@@ -22,7 +22,7 @@ class SorteoController extends Controller
         'user_id' => auth()->id()
     ]);
 
-    // 🔥 Esto dispara la generación automática
+    
     GenerarTicketsJob::dispatch($sorteo);
 
     return back()->with('success', 'Sorteo creado y tickets generándose.');

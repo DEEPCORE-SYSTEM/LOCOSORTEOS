@@ -14,7 +14,7 @@ class SorteosSeeder extends Seeder
      */
     public function run(): void
     {
-        // Encontrar o crear un usuario Admin al que asociar el sorteo
+        
         $admin = User::role('admin')->first();
         if (!$admin) {
             $admin = User::first();
@@ -24,11 +24,11 @@ class SorteosSeeder extends Seeder
             return;
         }
 
-        // Crear el Sorteo principal de ficher.jsx
+        
         $sorteoInfo = [
             'nombre' => 'Gran Sorteo 28 de Febrero',
             'tipo' => 'General',
-            'imagen_hero' => 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&q=80&w=1920', // URL fondo
+            'imagen_hero' => 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&q=80&w=1920', 
             'descripcion' => 'Participa con confianza y gana grandes premios vehiculares, efectivo y tecnología con el sorteo más transparente, respaldado por el sector agrario.',
             'fecha_inicio' => Carbon::now()->subDays(10),
             'fecha_fin' => Carbon::createFromFormat('Y-m-d H:i:s', '2026-02-28 20:00:00'),
@@ -40,7 +40,7 @@ class SorteosSeeder extends Seeder
 
         $sorteo = Sorteo::create($sorteoInfo);
 
-        // Crear Premios basados en ficher.jsx
+        
         $premiosFicher = [
             ['orden' => 1, 'qty' => 1, 'name' => 'FORD - TERRITORY', 'type' => 'Camioneta', 'image' => 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&q=80&w=600'],
             ['orden' => 2, 'qty' => 1, 'name' => 'Toyota Avanza', 'type' => 'Camioneta', 'image' => 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?auto=format&fit=crop&q=80&w=600'],

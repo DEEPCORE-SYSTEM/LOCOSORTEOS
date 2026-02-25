@@ -23,7 +23,7 @@ class GenerarTicketsJob implements ShouldQueue
         $cantidad = $this->sorteo->cantidad_tickets;
 
         $batch = [];
-        $chunkSize = 1000; // inserta de 1000 en 1000 (rápido y eficiente)
+        $chunkSize = 1000; 
 
         for ($i = 1; $i <= $cantidad; $i++) {
 
@@ -41,7 +41,7 @@ class GenerarTicketsJob implements ShouldQueue
             }
         }
 
-        // Inserta los restantes
+        
         if (!empty($batch)) {
             Ticket::insert($batch);
         }

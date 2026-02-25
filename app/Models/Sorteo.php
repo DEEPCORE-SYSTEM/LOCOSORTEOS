@@ -10,6 +10,7 @@ class Sorteo extends Model
         'nombre',
         'tipo',
         'imagen_hero',
+        'banner_promocional',
         'descripcion',
         'fecha_inicio',
         'fecha_fin',

@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { User, Search, Loader2 } from 'lucide-react';
+import axios from 'axios';
 
 export default function LoginRegister({ renderMode = 'login', status, canResetPassword }) {
   const [isLoginMode, setIsLoginMode] = useState(renderMode === 'login');
   
-  // Estados para Login
+  
   const loginForm = useForm({
     loginUser: '',
     password: '',
   });
   
-  // Estados para Registro
+  
   const regForm = useForm({
     dni: '',
     name: '',
@@ -29,14 +30,22 @@ export default function LoginRegister({ renderMode = 'login', status, canResetPa
     'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'
   ];
 
-  const handleConsultarDni = () => {
+  const handleConsultarDni = async () => {
     if (regForm.data.dni.length === 8) {
       setIsConsultingDni(true);
-      // Simulación de consulta a API de RENIEC
-      setTimeout(() => {
-        regForm.setData('name', 'JUAN CARLOS PEREZ GOMEZ');
+      regForm.clearErrors('dni');
+      try {
+        const response = await axios.post('/api/consultar-dni', { dni: regForm.data.dni });
+        if (response.data.success) {
+          regForm.setData('name', response.data.nombre);
+        } else {
+          regForm.setError('dni', response.data.error || 'DNI no encontrado');
+        }
+      } catch (error) {
+        regForm.setError('dni', 'Error al consultar DNI. Ingresa tu nombre manualmente o intenta después.');
+      } finally {
         setIsConsultingDni(false);
-      }, 1500);
+      }
     }
   };
 
@@ -108,7 +117,7 @@ export default function LoginRegister({ renderMode = 'login', status, canResetPa
                     required 
                     maxLength="8"
                     value={regForm.data.dni}
-                    onChange={(e) => regForm.setData('dni', e.target.value.replace(/\D/g, ''))} // Solo números
+                    onChange={(e) => regForm.setData('dni', e.target.value.replace(/\D/g, ''))} 
                     className="w-full px-4 py-3 rounded-xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:outline-none focus:ring-0 focus:border-emerald-500 transition-all font-mono font-bold text-slate-700 tracking-widest" 
                     placeholder="Ej. 72345678" 
                   />
@@ -132,7 +141,7 @@ export default function LoginRegister({ renderMode = 'login', status, canResetPa
                   required 
                   value={regForm.data.name}
                   onChange={(e) => regForm.setData('name', e.target.value)}
-                  readOnly={!!regForm.data.name} // Se vuelve de solo lectura si la simulacion (API) lo llena
+                  readOnly={!!regForm.data.name} 
                   className={`w-full px-4 py-3 rounded-xl border-2 transition-all font-bold ${regForm.data.name ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-100 text-slate-700 focus:bg-white focus:border-emerald-500'}`} 
                   placeholder="Se autocompletará con tu DNI" 
                 />

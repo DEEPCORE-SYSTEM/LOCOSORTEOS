@@ -11,8 +11,15 @@ class Compra extends Model
         'sorteo_id',
         'total',
         'metodo_pago',
+        'estado',
+        'motivo_rechazo',
         'comprobante',
-        'registrado_por'
+        'detalles',
+        'registrado_por',
+    ];
+
+    protected $casts = [
+        'detalles' => 'array',
     ];
 
     public function tickets()
@@ -20,8 +27,13 @@ class Compra extends Model
         return $this->belongsToMany(Ticket::class, 'compra_ticket');
     }
 
-    public function cliente()
+    public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function sorteo()
+    {
+        return $this->belongsTo(Sorteo::class, 'sorteo_id');
     }
 }

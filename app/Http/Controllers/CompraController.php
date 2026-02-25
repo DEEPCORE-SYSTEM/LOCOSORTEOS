@@ -12,21 +12,21 @@ class CompraController extends Controller
 {
     public function comprar(Request $request)
     {
-        $ticketIds = $request->tickets; // array de tickets seleccionados
+        $ticketIds = $request->tickets; 
         $userId = auth()->id();
 
         return DB::transaction(function () use ($ticketIds, $userId, $request) {
 
             $tickets = Ticket::whereIn('id', $ticketIds)->lockForUpdate()->get();
 
-            // Verificar disponibilidad
+            
             foreach ($tickets as $ticket) {
                 if ($ticket->estado !== 'disponible') {
                     abort(400, "Uno de los tickets ya fue vendido.");
                 }
             }
 
-            // Crear compra
+            
             $compra = Compra::create([
                 'user_id' => $userId,
                 'sorteo_id' => $tickets->first()->sorteo_id,
@@ -36,7 +36,7 @@ class CompraController extends Controller
                 'registrado_por' => $userId
             ]);
 
-            // Marcar tickets como vendidos
+            
             foreach ($tickets as $ticket) {
                 $ticket->update([
                     'estado' => 'vendido',
@@ -45,7 +45,7 @@ class CompraController extends Controller
                 ]);
             }
 
-            // Relacionar compra con tickets
+            
             $compra->tickets()->attach($ticketIds);
 
             return response()->json(['success' => true]);

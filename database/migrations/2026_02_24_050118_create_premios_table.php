@@ -18,11 +18,11 @@ public function up(): void
 
         $table->string('nombre');
         $table->integer('cantidad')->default(1);
-        $table->string('tipo')->nullable(); // Ej: Camioneta, Auto, Efectivo, Tecnología
+        $table->string('tipo')->nullable(); 
         $table->text('descripcion')->nullable();
         $table->string('imagen')->nullable();
 
-        // Orden del premio (1er premio, 2do, etc.)
+        
         $table->integer('orden');
 
         $table->timestamps();

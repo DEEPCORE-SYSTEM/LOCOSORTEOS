@@ -30,7 +30,7 @@ class AdminLoginController extends Controller
 
         $userOrPhone = $request->input('loginUser');
         $field = strlen($userOrPhone) === 8 ? 'dni' : 'telefono';
-        // Si contiene @, asumimos email (por si deciden poner email después)
+        
         if (str_contains($userOrPhone, '@')) {
             $field = 'email';
         }
@@ -38,12 +38,12 @@ class AdminLoginController extends Controller
         if (Auth::attempt([$field => $userOrPhone, 'password' => $request->input('password')], $request->boolean('remember'))) {
             $request->session()->regenerate();
             
-            // Verificar si el usuario tiene rol de admin, usando Spatie permissions
+            
             if (Auth::user()->hasRole('admin')) {
                 return redirect()->intended(route('admin.dashboard', absolute: false));
             }
 
-            // Si no es admin, lo cerramos y le decimos que no tiene permisos
+            
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

@@ -28,7 +28,7 @@ class PublicoController extends Controller
     {
         return DB::transaction(function () use ($request) {
 
-            // Crear o encontrar cliente (sin login)
+            
             $user = User::firstOrCreate(
                 ['email' => $request->dni.'@cliente.com'],
                 [
