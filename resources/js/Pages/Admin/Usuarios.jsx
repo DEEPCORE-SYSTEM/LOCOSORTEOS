@@ -1,41 +1,108 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
   Users, Search, Edit, AlertTriangle, CheckCircle, XCircle,
-  Eye, Upload, Ticket, MessageCircle
+  Eye, Upload, Ticket, MessageCircle, Trash2, X, ShoppingBag
 } from 'lucide-react';
 
-export default function Usuarios({ adminUsersData = [], sorteosData = [] }) {
+export default function Usuarios({ adminUsersPaginated, sorteosData = [], filters = {} }) {
   const pendingTicketsCount = 0;
 
-  const [adminUsers, setAdminUsers] = useState(adminUsersData);
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userStatusFilter, setUserStatusFilter] = useState('todos');
-  const [userDrawFilter, setUserDrawFilter] = useState('todos');
+  const { flash } = usePage().props;
+
+  const adminUsers = adminUsersPaginated?.data || [];
+  const paginationLinks = adminUsersPaginated?.links || [];
+  const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const [userSearchQuery, setUserSearchQuery] = useState(params.get('search') || '');
+  const [userStatusFilter, setUserStatusFilter] = useState(params.get('status') || 'todos');
+  const [userDrawFilter, setUserDrawFilter] = useState(params.get('draw') || 'todos');
+  const [userPerPage, setUserPerPage] = useState(filters.perPage || 25);
+  const [historialModal, setHistorialModal] = useState(null); // user obj
 
   // Edit State
   const [editingUserId, setEditingUserId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', dni: '', phone: '' });
 
-  const filteredAdminUsers = adminUsers.filter(user => {
-    const matchSearch =
-      user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-      user.dni.includes(userSearchQuery) ||
-      user.phone.includes(userSearchQuery);
+  const filteredAdminUsers = adminUsers;
 
-    const matchStatus =
-      userStatusFilter === 'todos' ? true :
-      userStatusFilter === 'activos' ? user.status === 'activo' :
-      userStatusFilter === 'baneados' ? user.status === 'bloqueado' :
-      userStatusFilter === 'sin_compras' ? user.totalTickets === 0 : true;
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      const currentSearch = params.get('search') || '';
+      const currentStatus = params.get('status') || 'todos';
+      const currentDraw = params.get('draw') || 'todos';
 
-    const matchDraw =
-      userDrawFilter === 'todos' ? true :
-      Array.isArray(user.draws) && user.draws.includes(userDrawFilter);
+      if (userSearchQuery !== currentSearch || userStatusFilter !== currentStatus || userDrawFilter !== currentDraw || userPerPage.toString() !== (params.get('perPage') || '25').toString()) {
+          router.get('/admin/usuarios', {
+            search: userSearchQuery,
+            status: userStatusFilter,
+            draw: userDrawFilter,
+            perPage: userPerPage
+          }, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true
+          });
+      }
+    }, 400);
 
-    return matchSearch && matchStatus && matchDraw;
-  });
+    return () => clearTimeout(delayDebounceFn);
+  }, [userSearchQuery, userStatusFilter, userDrawFilter, userPerPage]);
+
+  const exportUsersToCsv = () => {
+    if (!filteredAdminUsers || filteredAdminUsers.length === 0) {
+      alert('No hay usuarios para exportar con los filtros actuales.');
+      return;
+    }
+
+    const headers = [
+      'ID',
+      'Nombre',
+      'DNI',
+      'Telefono',
+      'FechaRegistro',
+      'TotalTickets',
+      'Estado',
+      'SorteosParticipados',
+    ];
+
+    const rows = filteredAdminUsers.map((u) => {
+      const draws = Array.isArray(u.draws) ? u.draws.join(' | ') : '';
+      return [
+        u.id,
+        u.name || '',
+        u.dni || '',
+        u.phone || '',
+        u.date || '',
+        u.totalTickets ?? 0,
+        u.status || '',
+        draws,
+      ];
+    });
+
+    const escapeCell = (value) =>
+      `"${(value ?? '').toString().replace(/"/g, '""')}"`;
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map(escapeCell).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute(
+      'download',
+      `usuarios_campoagro_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
 
   const handleToggleUserStatus = (userId, currentStatus, userName) => {
     const newStatus = currentStatus === 'activo' ? 'bloqueado' : 'activo';
@@ -84,6 +151,15 @@ export default function Usuarios({ adminUsersData = [], sorteosData = [] }) {
     });
   };
 
+  const handleDeleteUser = (userId, userName) => {
+    if (window.confirm(`¿Eliminar definitivamente la cuenta de ${userName}?\nSolo se puede si no tiene compras activas.`)) {
+      router.delete(`/admin/usuarios/${userId}`, {
+        preserveScroll: true,
+        onSuccess: () => setAdminUsers(prev => prev.filter(u => u.id !== userId)),
+      });
+    }
+  };
+
   const totalClientes = adminUsers.length;
   const clientesActivos = adminUsers.filter(u => u.totalTickets > 0).length;
   const cuentasBaneadas = adminUsers.filter(u => u.status === 'bloqueado').length;
@@ -92,7 +168,10 @@ export default function Usuarios({ adminUsersData = [], sorteosData = [] }) {
 
   return (
     <AdminLayout currentView="admin-users" pendingTicketsCount={pendingTicketsCount}>
-      <Head title="Gestión de Usuarios | Admin Finagro" />
+      <Head title="Gestión de Usuarios | Admin Campoagro" />
+
+      {flash?.success && <div className="mb-4 text-sm text-emerald-600 bg-emerald-50 px-4 py-3 rounded-xl border border-emerald-200 font-bold">{flash.success}</div>}
+      {flash?.error && <div className="mb-4 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl border border-red-200 font-bold">{flash.error}</div>}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -140,6 +219,18 @@ export default function Usuarios({ adminUsersData = [], sorteosData = [] }) {
             />
           </div>
           <select
+            value={userPerPage}
+            onChange={(e) => setUserPerPage(e.target.value)}
+            className="border border-slate-200 text-sm font-bold text-slate-600 py-2.5 px-4 rounded-xl focus:outline-none focus:border-emerald-500"
+          >
+            <option value="25">25 Filas</option>
+            <option value="50">50 Filas</option>
+            <option value="100">100 Filas</option>
+            <option value="500">500 Filas</option>
+            <option value="1000">1000 Filas</option>
+            <option value="todos">Todos</option>
+          </select>
+          <select
             value={userDrawFilter}
             onChange={(e) => setUserDrawFilter(e.target.value)}
             className="border border-slate-200 text-sm font-bold text-slate-600 py-2.5 px-4 rounded-xl focus:outline-none focus:border-emerald-500"
@@ -161,7 +252,11 @@ export default function Usuarios({ adminUsersData = [], sorteosData = [] }) {
           </select>
         </div>
         <div className="flex gap-2 w-full xl:w-auto">
-          <button className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm">
+          <button
+            type="button"
+            onClick={exportUsersToCsv}
+            className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm"
+          >
             <Upload className="w-4 h-4" /> Exportar DB
           </button>
         </div>
@@ -318,34 +413,42 @@ export default function Usuarios({ adminUsersData = [], sorteosData = [] }) {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm"
-                          title="Ver Historial de Compras"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => startEditing(user)}
-                          className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm"
-                          title="Editar Datos"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleUserStatus(user.id, user.status, user.name)}
-                          className={`p-2 rounded-lg transition-colors shadow-sm text-white ${
-                            user.status === 'activo'
-                              ? 'bg-red-500 hover:bg-red-600'
-                              : 'bg-emerald-500 hover:bg-emerald-600'
-                          }`}
-                          title={user.status === 'activo' ? 'Suspender/Banear Usuario' : 'Reactivar Usuario'}
-                        >
-                          {user.status === 'activo'
-                            ? <AlertTriangle className="w-4 h-4" />
-                            : <CheckCircle className="w-4 h-4" />}
-                        </button>
-                      </div>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm"
+                            title="Ver Historial de Compras"
+                            onClick={() => setHistorialModal(user)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => startEditing(user)}
+                            className="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 p-2 rounded-lg transition-colors shadow-sm"
+                            title="Editar Datos"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleToggleUserStatus(user.id, user.status, user.name)}
+                            className={`p-2 rounded-lg transition-colors shadow-sm text-white ${
+                              user.status === 'activo'
+                                ? 'bg-red-500 hover:bg-red-600'
+                                : 'bg-emerald-500 hover:bg-emerald-600'
+                            }`}
+                            title={user.status === 'activo' ? 'Suspender/Banear Usuario' : 'Reactivar Usuario'}
+                          >
+                            {user.status === 'activo'
+                              ? <AlertTriangle className="w-4 h-4" />
+                              : <CheckCircle className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id, user.name)}
+                            className="bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 border border-slate-200 hover:border-red-200 p-2 rounded-lg transition-colors shadow-sm"
+                            title="Eliminar Usuario"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                     )}
                   </td>
                 </tr>
@@ -361,16 +464,69 @@ export default function Usuarios({ adminUsersData = [], sorteosData = [] }) {
             </tbody>
           </table>
         </div>
-        <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
-          <p className="text-xs text-slate-500 font-bold">
-            Mostrando {filteredAdminUsers.length} de {adminUsers.length} usuarios
+        <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50 flex-col md:flex-row gap-4">
+          <p className="text-xs text-slate-500 font-bold text-center md:text-left">
+            Mostrando página {adminUsersPaginated.current_page} de {adminUsersPaginated.last_page} ({adminUsersPaginated.total} registros totales)
           </p>
-          <div className="flex gap-1">
-            <button className="px-3 py-1.5 border border-slate-200 text-slate-400 rounded-lg bg-white cursor-not-allowed text-xs font-bold">Anterior</button>
-            <button className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg bg-white hover:bg-slate-100 transition-colors text-xs font-bold">Siguiente</button>
+          <div className="flex gap-1 flex-wrap justify-center md:justify-end">
+            {paginationLinks.length > 3 && paginationLinks.map((link, idx) => (
+              <div key={idx}>
+                {link.url === null ? (
+                    <span className="px-3 py-1.5 border border-slate-200 text-slate-400 rounded-lg bg-white cursor-not-allowed text-xs font-bold ring-1 ring-transparent" dangerouslySetInnerHTML={{ __html: link.label }} />
+                ) : (
+                    <button
+                      type="button"
+                      onClick={() => router.get(link.url, { search: userSearchQuery, status: userStatusFilter, draw: userDrawFilter, perPage: userPerPage }, { preserveState: true })}
+                      className={`px-3 py-1.5 border border-slate-200 rounded-lg transition-colors text-xs font-bold ${link.active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                      dangerouslySetInnerHTML={{ __html: link.label }}
+                    />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
+
+      {/* Modal Historial de Compras */}
+      {historialModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={() => setHistorialModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <p className="font-black text-slate-900">{historialModal.name}</p>
+                  <p className="text-xs text-slate-500">DNI: {historialModal.dni}</p>
+                </div>
+              </div>
+              <button onClick={() => setHistorialModal(null)} className="text-slate-400 hover:text-red-500 p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm font-bold text-slate-600 mb-3">Sorteos participados ({historialModal.draws?.length || 0})</p>
+              {historialModal.draws?.length > 0 ? (
+                <div className="space-y-2">
+                  {historialModal.draws.map((d, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <Ticket className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="text-sm font-bold text-slate-800">{d}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-400">
+                  <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p className="font-medium">Sin compras registradas</p>
+                </div>
+              )}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <span className="text-xs text-slate-500 font-bold">Total tickets: <span className="text-slate-900">{historialModal.totalTickets}</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

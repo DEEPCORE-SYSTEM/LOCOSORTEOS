@@ -60,4 +60,9 @@ protected $fillable = [
     {
         return $this->hasMany(Ticket::class);
     }
+
+    public function compras()
+    {
+        return $this->hasMany(Compra::class);
+    }
 }

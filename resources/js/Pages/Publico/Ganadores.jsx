@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, Trophy, ChevronRight, Search } from 'lucide-react';
 
-export default function Ganadores({ ganadores = [], filters = {} }) {
+export default function Ganadores({ ganadoresPaginated, filters = {} }) {
+  const ganadores = ganadoresPaginated?.data || [];
+  const paginationLinks = ganadoresPaginated?.links || [];
   const [winnersTab, setWinnersTab] = useState('reciente');
   const [filterCategory, setFilterCategory] = useState('Todos');
   const [filterLocation, setFilterLocation] = useState('Todas las ciudades');
@@ -24,9 +26,11 @@ export default function Ganadores({ ganadores = [], filters = {} }) {
     return true; 
   });
 
+  const { auth } = usePage().props;
+
   return (
-    <PublicLayout>
-      <Head title="Nuestros Ganadores | Sorteos Finagro" />
+    <PublicLayout isLoggedIn={!!auth?.user} currentUser={auth?.user}>
+      <Head title="Nuestros Ganadores | Sorteos CampoAgro" />
       <section className="bg-[#F4F6F9] min-h-screen pb-20">
         {/* HEADER DE SORTEOS (Tabs) */}
         <div className="bg-white shadow-sm border-b border-gray-200 sticky top-[60px] md:top-[68px] z-40">
@@ -158,6 +162,30 @@ export default function Ganadores({ ganadores = [], filters = {} }) {
           {filteredWinners.length === 0 && (
             <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-slate-100">
               <p className="text-slate-500 font-bold">No se encontraron ganadores con estos filtros.</p>
+            </div>
+          )}
+
+          {/* Paginación */}
+          {paginationLinks.length > 3 && (
+            <div className="mt-12 flex items-center justify-center">
+              <div className="flex gap-2 flex-wrap justify-center">
+                {paginationLinks.map((link, idx) => (
+                  <div key={idx}>
+                    {link.url === null ? (
+                        <span className="px-4 py-2 border border-slate-200 text-slate-400 rounded-xl bg-slate-50 cursor-not-allowed text-sm font-bold block min-w-[40px] text-center" dangerouslySetInnerHTML={{ __html: link.label }} />
+                    ) : (
+                        <button
+                          type="button"
+                          onClick={() => router.get(link.url, { search: searchTerm }, { preserveState: true })}
+                          className={`px-4 py-2 border rounded-xl transition-all text-sm font-bold min-w-[40px] text-center shadow-sm ${
+                            link.active ? 'bg-amber-400 border-amber-400 text-slate-900 ring-2 ring-amber-200' : 'bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 border-slate-200'
+                          }`}
+                          dangerouslySetInnerHTML={{ __html: link.label }}
+                        />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

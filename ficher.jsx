@@ -477,7 +477,7 @@ export default function App() {
             <div>
               <span className="text-xl font-black italic uppercase text-white flex items-center gap-2">
                 <Sprout className="w-5 h-5 text-amber-400" />
-                Sorteos <span className="text-amber-400">Finagro</span>
+                Sorteos <span className="text-amber-400">CampoAgro</span>
               </span>
               <p className="text-[10px] font-bold tracking-widest text-emerald-400 uppercase mt-1">Panel Administrativo</p>
             </div>
@@ -532,7 +532,7 @@ export default function App() {
               </button>
               <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-200 cursor-pointer">
                 <div className="bg-emerald-100 w-8 h-8 rounded-full flex items-center justify-center text-emerald-700 font-bold">A</div>
-                <span className="font-bold text-sm hidden md:block">Admin Finagro</span>
+                <span className="font-bold text-sm hidden md:block">Admin CampoAgro</span>
               </div>
               <button onClick={() => setCurrentView('home')} className="md:hidden p-2 text-slate-500 hover:text-red-600">
                 <ArrowLeft className="w-5 h-5" />
@@ -1462,7 +1462,7 @@ export default function App() {
                                   <div className="bg-amber-400 p-1 rounded">
                                     <Sprout className="w-3 h-3 text-emerald-900" />
                                   </div>
-                                  <span className="text-[10px] font-black italic uppercase text-slate-900 leading-none">Sorteos<br /><span className="text-emerald-600">Finagro</span></span>
+                                  <span className="text-[10px] font-black italic uppercase text-slate-900 leading-none">Sorteos<br /><span className="text-emerald-600">CampoAgro</span></span>
                                 </div>
                                 <div className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded">
                                   S/ 40.00
@@ -1478,7 +1478,7 @@ export default function App() {
                               <div className="flex items-end justify-between mt-3 relative z-10">
                                 <div>
                                   <p className="text-[7px] text-slate-500 font-bold mb-0.5">Transmisión en vivo por:</p>
-                                  <p className="text-[8px] font-black text-blue-600 flex items-center gap-0.5"><Facebook className="w-2.5 h-2.5" /> SorteosFinagroOficial</p>
+                                  <p className="text-[8px] font-black text-blue-600 flex items-center gap-0.5"><Facebook className="w-2.5 h-2.5" /> SorteosCampoAgroOficial</p>
                                 </div>
                                 <div className="bg-white p-0.5 border border-slate-200 rounded">
                                   <QrCode className="w-8 h-8 text-slate-800" />
@@ -1735,7 +1735,7 @@ export default function App() {
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
                       <label className="block text-sm font-bold text-slate-700 mb-2">Título Promocional del Sorteo</label>
-                      <input type="text" required placeholder="Ej: Gran Sorteo Nacional Finagro 2026" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none font-medium" />
+                      <input type="text" required placeholder="Ej: Gran Sorteo Nacional CampoAgro 2026" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none font-medium" />
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-bold text-slate-700 mb-2">Descripción (Visible para el cliente)</label>
@@ -2099,7 +2099,7 @@ export default function App() {
               <Sprout className="w-6 h-6 text-emerald-900" />
             </div>
             <span className="cursor-pointer text-xl font-black italic tracking-tight uppercase text-slate-900" onClick={() => setCurrentView('home')}>
-              Sorteos <span className="text-emerald-600">Finagro</span>
+              Sorteos <span className="text-emerald-600">CampoAgro</span>
             </span>
           </div>
 
@@ -2153,7 +2153,7 @@ export default function App() {
           <div className="text-red-700">
             <p className="font-bold text-sm md:text-base">⚠️ ¡ALERTA DE SEGURIDAD! No te dejes engañar ⚠️</p>
             <p className="text-xs md:text-sm mt-0.5">
-              Verifica siempre que al realizar el pago salga a nombre de: <strong className="bg-red-600 px-1.5 py-0.5 rounded text-white inline-block mt-1 md:mt-0">INVERSIONES FINAGRO E.I.R.L.</strong>. Si sale otro nombre, ¡ESTÁS SIENDO ESTAFADO!
+              Verifica siempre que al realizar el pago salga a nombre de: <strong className="bg-red-600 px-1.5 py-0.5 rounded text-white inline-block mt-1 md:mt-0">INVERSIONES CampoAgro E.I.R.L.</strong>. Si sale otro nombre, ¡ESTÁS SIENDO ESTAFADO!
             </p>
           </div>
         </div>
@@ -2170,7 +2170,7 @@ export default function App() {
                 key={idx}
                 className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentBgIndex ? 'opacity-100' : 'opacity-0'}`}
               >
-                <img src={bg} alt={`Fondo Finagro ${idx + 1}`} className="w-full h-full object-cover" />
+                <img src={bg} alt={`Fondo CampoAgro ${idx + 1}`} className="w-full h-full object-cover" />
                 {/* Overlay oscuro/verde para que resalte el texto frontal */}
                 <div className="absolute inset-0 bg-gradient-to-r from-[#064E3B]/95 via-[#064E3B]/80 to-black/60 backdrop-blur-[1px]"></div>
               </div>
@@ -2199,7 +2199,7 @@ export default function App() {
                   </h1>
 
                   <p className="text-lg md:text-xl text-emerald-50 mb-8 max-w-xl mx-auto lg:mx-0 font-medium leading-relaxed drop-shadow-md">
-                    ¡Tu oportunidad de ganar autos, camionetas, motos y miles de soles en efectivo está aquí! Participa hoy de forma 100% segura respaldado por <strong className="text-amber-400">Inversiones Finagro E.I.R.L.</strong>
+                    ¡Tu oportunidad de ganar autos, camionetas, motos y miles de soles en efectivo está aquí! Participa hoy de forma 100% segura respaldado por <strong className="text-amber-400">Inversiones CampoAgro E.I.R.L.</strong>
                   </p>
 
                   {/* CONTEO REGRESIVO (Glassmorphism para fondo imagen) */}
@@ -2282,7 +2282,7 @@ export default function App() {
                       </div>
                       <div className="mt-4 pt-4 border-t border-emerald-100 text-center">
                         <p className="text-[10px] text-emerald-700 uppercase font-bold tracking-wider mb-1">A nombre de:</p>
-                        <p className="text-sm font-black text-slate-800">INVERSIONES FINAGRO E.I.R.L.</p>
+                        <p className="text-sm font-black text-slate-800">INVERSIONES CampoAgro E.I.R.L.</p>
                       </div>
                     </div>
 
@@ -2780,7 +2780,7 @@ export default function App() {
                     </div>
                   </div>
                   <p className="text-center text-sm text-slate-600 font-medium mt-4">
-                    A nombre de: <strong className="text-slate-900">INVERSIONES FINAGRO E.I.R.L.</strong>
+                    A nombre de: <strong className="text-slate-900">INVERSIONES CampoAgro E.I.R.L.</strong>
                   </p>
                 </div>
 
@@ -3029,7 +3029,7 @@ export default function App() {
               <div className="bg-amber-400 p-1.5 rounded-lg">
                 <Sprout className="w-5 h-5 text-emerald-900" />
               </div>
-              <span className="text-xl font-black italic uppercase text-slate-900">Sorteos <span className="text-emerald-600">Finagro</span></span>
+              <span className="text-xl font-black italic uppercase text-slate-900">Sorteos <span className="text-emerald-600">CampoAgro</span></span>
             </div>
             <p className="mb-6 text-slate-500">Participa con confianza y gana grandes premios vehiculares, efectivo y tecnología con el sorteo más transparente, respaldado por el sector agrario.</p>
           </div>
@@ -3047,7 +3047,7 @@ export default function App() {
           <div>
             <h4 className="text-slate-900 font-bold uppercase mb-4 tracking-wider text-xs">Empresa Operadora</h4>
             <div className="bg-slate-50 p-4 rounded-xl border border-emerald-100">
-              <p className="font-black text-slate-800 mb-1">INVERSIONES FINAGRO E.I.R.L.</p>
+              <p className="font-black text-slate-800 mb-1">INVERSIONES CampoAgro E.I.R.L.</p>
               <p className="text-xs text-slate-500 mb-3">RUC: 20602462758</p>
               <p className="text-red-600 font-bold text-xs flex items-center gap-1 justify-center md:justify-start">
                 <AlertTriangle className="w-4 h-4" /> Nunca deposites a personas naturales.
@@ -3057,7 +3057,7 @@ export default function App() {
         </div>
 
         <div className="container mx-auto px-4 max-w-6xl border-t border-gray-100 pt-8 text-center text-slate-400 font-medium">
-          <p>© 2026 Sorteos Finagro. Todos los derechos reservados.</p>
+          <p>© 2026 Sorteos CampoAgro. Todos los derechos reservados.</p>
         </div>
       </footer>
 

@@ -1,12 +1,14 @@
 import React from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, Megaphone, BellRing, Facebook, MessageCircle, Send } from 'lucide-react';
 
 export default function Difusion({ broadcastMessages = [] }) {
+  const { auth } = usePage().props;
+
   return (
-    <PublicLayout>
-      <Head title="Canal de Difusión | Sorteos Finagro" />
+    <PublicLayout isLoggedIn={!!auth?.user} currentUser={auth?.user}>
+      <Head title="Canal de Difusión | Sorteos CampoAgro" />
       <section className="py-12 bg-[#F8FAFC] min-h-[60vh]">
         <div className="container mx-auto px-4 max-w-3xl">
           <Link href="/" className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-bold mb-6 transition-colors w-max">

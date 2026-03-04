@@ -117,7 +117,7 @@ export default function AdminLogin({ status }) {
             </div>
             
             <div className="absolute bottom-6 left-0 w-full text-center z-10">
-                <p className="text-slate-600 text-xs font-medium">Finagro Platform © 2026. Todos los derechos reservados.</p>
+                <p className="text-slate-600 text-xs font-medium">Campoagro Platform © 2026. Todos los derechos reservados.</p>
             </div>
         </div>
     );

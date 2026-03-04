@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Save, ArrowLeft, Image as ImageIcon, Calendar, Tag, DollarSign, Target, Plus, Trash2, Upload } from 'lucide-react';
+import axios from 'axios';
 
 export default function SorteoForm({ sorteo }) {
   const isEditing = !!sorteo;
@@ -37,6 +38,26 @@ export default function SorteoForm({ sorteo }) {
     }
   };
 
+  const [uploadingImg, setUploadingImg] = useState({});
+
+  const uploadFile = async (file, fieldName, extraHandler) => {
+    if (!file) return;
+    setUploadingImg(prev => ({ ...prev, [fieldName]: true }));
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const { data: res } = await axios.post('/admin/upload-image', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (extraHandler) extraHandler(res.url);
+      else setData(fieldName, res.url);
+    } catch (err) {
+      alert('Error al subir la imagen. Verifica el formato y tamaño (máx 10MB).');
+    } finally {
+      setUploadingImg(prev => ({ ...prev, [fieldName]: false }));
+    }
+  };
+
   const addPremioRow = () => {
     setData('premios', [
       ...data.premios,
@@ -59,7 +80,7 @@ export default function SorteoForm({ sorteo }) {
 
   return (
     <AdminLayout currentView="admin-sorteos" pendingTicketsCount={0}>
-      <Head title={`${isEditing ? 'Editar' : 'Crear'} Sorteo | Admin Finagro`} />
+      <Head title={`${isEditing ? 'Editar' : 'Crear'} Sorteo | Admin Campoagro`} />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -91,14 +112,14 @@ export default function SorteoForm({ sorteo }) {
                   value={data.nombre}
                   onChange={e => setData('nombre', e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none placeholder-slate-400 font-bold" 
-                  placeholder="Ej: Gran Sorteo Nacional Finagro 2026" 
+                  placeholder="Ej: Gran Sorteo Nacional Campoagro 2026" 
                 />
                 {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Descripción (Visible para el cliente)</label>
                 <textarea 
-                  value={data.descripcion}
+                  value={data.descripcion || ''}
                   onChange={e => setData('descripcion', e.target.value)}
                   rows="3" 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none placeholder-slate-400 font-medium text-sm" 
@@ -148,7 +169,7 @@ export default function SorteoForm({ sorteo }) {
                 <label className="block text-xs font-bold text-slate-700 mb-2">Fecha y Hora de Cierre</label>
                 <input 
                   type="datetime-local" 
-                  value={data.fecha_fin}
+                  value={data.fecha_fin || ''}
                   onChange={e => setData('fecha_fin', e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-700 font-medium text-sm bg-white" 
                 />
@@ -188,44 +209,58 @@ export default function SorteoForm({ sorteo }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* Imagen Principal (Hero) */}
-              <div className="border border-slate-200 hover:border-emerald-500 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center bg-slate-50 relative overflow-hidden group">
-                <div className="z-10 relative flex flex-col items-center w-full">
-                   <ImageIcon className="w-8 h-8 text-slate-400 mb-3" />
-                   <span className="text-sm font-bold text-slate-700 block mb-1">Subir Imagen Principal (Hero)</span>
-                   <span className="text-[10px] text-slate-400 block mb-3">JPG, WEBP. Ideal 1000x1000px</span>
-                   <input
-                     type="text"
-                     value={data.imagen_hero}
-                     onChange={e => setData('imagen_hero', e.target.value)}
-                     placeholder="Pegar URL de la imagen aquí..."
-                     className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg text-center"
-                   />
-                </div>
-                {data.imagen_hero && (
-                  <div className="absolute inset-0 z-0 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <img src={data.imagen_hero} alt="bg" className="w-full h-full object-cover" />
-                  </div>
+              <div className="border border-slate-200 hover:border-emerald-500 transition-colors rounded-xl p-5 flex flex-col items-center justify-center text-center bg-slate-50 relative overflow-hidden group min-h-[140px]">
+                {data.imagen_hero ? (
+                  <>
+                    <img src={data.imagen_hero} alt="hero" className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" />
+                    <div className="z-10 relative">
+                      <p className="text-xs font-bold text-emerald-700 mb-2">✓ Imagen subida</p>
+                      <button type="button" onClick={() => setData('imagen_hero', '')} className="text-[10px] text-red-500 hover:text-red-700 font-bold">Eliminar</button>
+                    </div>
+                  </>
+                ) : (
+                  <label className="cursor-pointer z-10 relative flex flex-col items-center w-full">
+                    {uploadingImg['imagen_hero'] ? (
+                      <p className="text-xs text-slate-500 font-bold animate-pulse">Subiendo...</p>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-8 h-8 text-slate-400 mb-2" />
+                        <span className="text-sm font-bold text-slate-700 block mb-1">Imagen Principal (Hero)</span>
+                        <span className="text-[10px] text-slate-400 block mb-2">JPG, WEBP, PNG. Ideal 1000x1000px</span>
+                        <span className="text-xs text-emerald-600 font-bold underline">Haz clic para subir</span>
+                      </>
+                    )}
+                    <input type="file" accept="image/*" className="hidden"
+                      onChange={e => uploadFile(e.target.files[0], 'imagen_hero')} />
+                  </label>
                 )}
               </div>
 
               {/* Banner Promocional */}
-              <div className="border border-slate-200 hover:border-emerald-500 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center bg-slate-50 relative overflow-hidden group">
-                <div className="z-10 relative flex flex-col items-center w-full">
-                   <ImageIcon className="w-8 h-8 text-slate-400 mb-3" />
-                   <span className="text-sm font-bold text-slate-700 block mb-1">Subir Banner Promocional</span>
-                   <span className="text-[10px] text-slate-400 block mb-3">JPG, WEBP. Ideal 1920x820px</span>
-                   <input
-                     type="text"
-                     value={data.banner_promocional}
-                     onChange={e => setData('banner_promocional', e.target.value)}
-                     placeholder="Pegar URL del banner aquí..."
-                     className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg text-center"
-                   />
-                </div>
-                {data.banner_promocional && (
-                  <div className="absolute inset-0 z-0 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <img src={data.banner_promocional} alt="bg" className="w-full h-full object-cover" />
-                  </div>
+              <div className="border border-slate-200 hover:border-emerald-500 transition-colors rounded-xl p-5 flex flex-col items-center justify-center text-center bg-slate-50 relative overflow-hidden group min-h-[140px]">
+                {data.banner_promocional ? (
+                  <>
+                    <img src={data.banner_promocional} alt="banner" className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" />
+                    <div className="z-10 relative">
+                      <p className="text-xs font-bold text-emerald-700 mb-2">✓ Banner subido</p>
+                      <button type="button" onClick={() => setData('banner_promocional', '')} className="text-[10px] text-red-500 hover:text-red-700 font-bold">Eliminar</button>
+                    </div>
+                  </>
+                ) : (
+                  <label className="cursor-pointer z-10 relative flex flex-col items-center w-full">
+                    {uploadingImg['banner_promocional'] ? (
+                      <p className="text-xs text-slate-500 font-bold animate-pulse">Subiendo...</p>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-8 h-8 text-slate-400 mb-2" />
+                        <span className="text-sm font-bold text-slate-700 block mb-1">Banner Promocional</span>
+                        <span className="text-[10px] text-slate-400 block mb-2">JPG, WEBP, PNG. Ideal 1920x820px</span>
+                        <span className="text-xs text-emerald-600 font-bold underline">Haz clic para subir</span>
+                      </>
+                    )}
+                    <input type="file" accept="image/*" className="hidden"
+                      onChange={e => uploadFile(e.target.files[0], 'banner_promocional')} />
+                  </label>
                 )}
               </div>
 
@@ -242,17 +277,23 @@ export default function SorteoForm({ sorteo }) {
               {data.premios.map((premio, index) => (
                 <div key={premio.id || index} className="flex flex-col md:flex-row gap-3 items-center border border-slate-200 p-3 rounded-xl bg-white shadow-sm">
                   
-                  {/* Photo Upload Simul */}
-                  <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 overflow-hidden shrink-0 relative group">
-                    {premio.imagen ? (
+                  {/* Photo Upload Real */}
+                  <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-lg flex flex-col items-center justify-center overflow-hidden shrink-0 relative">
+                    {uploadingImg[`premio_${index}`] ? (
+                      <span className="text-[8px] text-slate-400 animate-pulse font-bold text-center px-1">Subiendo...</span>
+                    ) : premio.imagen ? (
                       <img src={premio.imagen} alt="premio" className="w-full h-full object-cover" />
                     ) : (
-                      <>
-                        <Upload className="w-4 h-4 text-slate-400 mb-1" />
-                        <span className="text-[8px] text-slate-400 font-bold uppercase">Subir<br/>Foto</span>
-                      </>
+                      <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
+                        <Upload className="w-4 h-4 text-slate-400 mb-0.5" />
+                        <span className="text-[8px] text-slate-400 font-bold uppercase text-center leading-tight">Subir<br/>Foto</span>
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={e => uploadFile(e.target.files[0], `premio_${index}`, (url) => updatePremio(index, 'imagen', url))} />
+                      </label>
                     )}
-                    <input type="text" value={premio.imagen || ''} onChange={(e) => updatePremio(index, 'imagen', e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer text-[1px]" title="URL de imagen" />
+                    {premio.imagen && (
+                      <button type="button" onClick={() => updatePremio(index, 'imagen', '')} className="absolute top-0 right-0 bg-red-500 text-white rounded-bl text-[9px] px-0.5 leading-tight">✕</button>
+                    )}
                   </div>
 
                   {/* Number / Position */}
@@ -262,7 +303,7 @@ export default function SorteoForm({ sorteo }) {
 
                   {/* Name / Category */}
                   <select 
-                    value={premio.nombre} 
+                    value={premio.nombre || 'Vehículo'} 
                     onChange={e => updatePremio(index, 'nombre', e.target.value)}
                     className="w-32 py-2.5 px-3 border border-slate-200 bg-slate-50 rounded-lg focus:outline-none focus:border-emerald-500 text-sm font-bold text-slate-700"
                   >
@@ -276,7 +317,7 @@ export default function SorteoForm({ sorteo }) {
                   {/* Description */}
                   <input 
                     type="text" 
-                    value={premio.descripcion} 
+                    value={premio.descripcion || ''} 
                     onChange={e => updatePremio(index, 'descripcion', e.target.value)}
                     placeholder="Descripción: Ej. Camioneta Toyota Hilux" 
                     className="flex-1 w-full py-2.5 px-4 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-sm placeholder-slate-400"
@@ -315,7 +356,11 @@ export default function SorteoForm({ sorteo }) {
               disabled={processing}
               className="px-8 py-3 rounded-xl font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg transition-transform transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50"
             >
-              {processing ? 'Procesando...' : <><Image as={Save} className="w-5 h-5 hidden" /><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Guardar y Procesar Sorteo</>}
+              {processing ? 'Procesando...' : (
+                <>
+                  <Save className="w-5 h-5" /> Guardar y Procesar Sorteo
+                </>
+              )}
             </button>
           </div>
 

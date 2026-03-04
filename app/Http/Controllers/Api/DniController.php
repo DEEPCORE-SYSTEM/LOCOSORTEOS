@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 class DniController extends Controller
 {
     /**
-     * Consulta el DNI usando apis.net.pe
+     * Consulta el DNI usando api.decolecta.com (RENIEC)
      */
     public function consultar(Request $request)
     {
@@ -17,38 +17,40 @@ class DniController extends Controller
             'dni' => 'required|string|size:8',
         ]);
 
-        $dni = $request->input('dni');
-        $token = env('APIS_NET_PE_TOKEN');
+        $dni   = $request->input('dni');
+        $token = env('DECOLECTA_API_KEY');
 
         if (!$token) {
-            return response()->json(['error' => 'API Token no configurado en el servidor.'], 500);
+            return response()->json(['error' => 'API Key no configurada en el servidor.'], 500);
         }
 
         try {
             $response = Http::withToken($token)
-                ->get('https://api.apis.net.pe/v2/reniec/dni', [
-                    'numero' => $dni
+                ->withoutVerifying()
+                ->get('https://api.decolecta.com/v1/reniec/dni', [
+                    'numero' => $dni,
                 ]);
 
             if ($response->successful()) {
                 $data = $response->json();
-                
-                
-                $nombreCompleto = trim($data['nombres'] . ' ' . $data['apellidoPaterno'] . ' ' . $data['apellidoMaterno']);
+
+                // Decolecta devuelve: full_name, first_name, first_last_name, second_last_name
+                $nombreCompleto = $data['full_name']
+                    ?? trim(($data['first_name'] ?? '') . ' ' . ($data['first_last_name'] ?? '') . ' ' . ($data['second_last_name'] ?? ''));
 
                 return response()->json([
                     'success' => true,
-                    'nombre' => $nombreCompleto
+                    'nombre'  => $nombreCompleto,
                 ]);
             }
 
             return response()->json([
-                'error' => 'No se encontró información o hubo un problema con la API.'
+                'error' => 'No se encontró información para ese DNI.',
             ], $response->status());
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Error al conectar con el servicio de consultas.'
+                'error' => 'Error al conectar con el servicio de consultas: ' . $e->getMessage(),
             ], 500);
         }
     }

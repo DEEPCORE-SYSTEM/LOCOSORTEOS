@@ -61,7 +61,7 @@ export default function LoginRegister({ renderMode = 'login', status, canResetPa
 
   return (
     <PublicLayout isLoggedIn={false} currentUser={null}>
-      <Head title={isLoginMode ? 'Iniciar Sesión | Sorteos Finagro' : 'Registro | Sorteos Finagro'} />
+      <Head title={isLoginMode ? 'Iniciar Sesión | Sorteos Campoagro' : 'Registro | Sorteos Campoagro'} />
       
       <section className="py-12 md:py-24 bg-[#F8FAFC] flex items-center justify-center px-4 min-h-[80vh]">
         <div className="bg-white p-8 rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-100 w-full max-w-md">

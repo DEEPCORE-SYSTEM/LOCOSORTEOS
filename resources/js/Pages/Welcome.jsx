@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
-import { Link, Head } from '@inertiajs/react';
+import { Link, Head, usePage } from '@inertiajs/react';
 import { 
   ShieldCheck, Car, Smartphone, Banknote, Ticket, 
   ChevronRight, ChevronLeft, Trophy, Image as ImageIcon 
 } from 'lucide-react';
 
-export default function Welcome({ sorteo }) {
+export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
   const [timeLeft, setTimeLeft] = useState({ meses: 0, dias: 0, horas: 0, minutos: 0, segundos: 0 });
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
   const carouselRef = useRef(null);
@@ -76,11 +76,12 @@ export default function Welcome({ sorteo }) {
   const tecnologiaCount = prizes.filter(p => ['Tecnología', 'Smartphone'].includes(p.type))
                                 .reduce((acc, curr) => acc + parseInt(curr.qty || 1), 0);
 
-  const grandWinners = sorteo?.ganadores || [];
+  const grandWinners = ganadores;
+  const { auth } = usePage().props;
 
   return (
-    <PublicLayout isLoggedIn={false} currentUser={null}>
-      <Head title="Sorteos Finagro | Gana increíbles premios" />
+    <PublicLayout isLoggedIn={!!auth?.user} currentUser={auth?.user}>
+      <Head title="Sorteos Campoagro | Gana increíbles premios" />
 
       {/* HERO SECTION MEJORADO CON CARRUSEL AGRÓNOMO */}
       <section className="relative pt-12 pb-20 md:pt-24 md:pb-32 overflow-hidden flex items-center bg-emerald-950">
@@ -91,7 +92,7 @@ export default function Welcome({ sorteo }) {
             key={idx}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentBgIndex ? 'opacity-100' : 'opacity-0'}`}
           >
-            <img src={bg} alt={`Fondo Finagro ${idx + 1}`} className="w-full h-full object-cover" />
+            <img src={bg} alt={`Fondo Campoagro ${idx + 1}`} className="w-full h-full object-cover" />
             {/* Overlay oscuro/verde para que resalte el texto frontal */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#064E3B]/95 via-[#064E3B]/80 to-black/60 backdrop-blur-[1px]"></div>
           </div>
@@ -109,31 +110,33 @@ export default function Welcome({ sorteo }) {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                   </span>
                   <p className="text-white font-bold uppercase tracking-widest text-xs md:text-sm">
-                    {sorteo.nombre}
+                    {new Date(sorteo.fecha_fin).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
               )}
               
-              <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tight leading-[1.1]">
-                <span className="[text-shadow:_0_4px_8px_rgba(0,0,0,0.5)]">
-                  {sorteo ? 'GANA UNO DE LOS' : 'PRÓXIMO'}
-                </span> <br className="hidden md:block"/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">
-                  {sorteo ? `${totalPrizesCount} PREMIOS` : 'GRAN SORTEO'}
+              <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tight leading-[1.1]">
+                {!sorteo && (
+                  <span className="[text-shadow:_0_4px_8px_rgba(0,0,0,0.5)]">
+                    PRÓXIMO <br className="hidden md:block"/>
+                  </span>
+                )}
+                <span className="text-[#ffd60a] uppercase [text-shadow:_0_4px_16px_rgba(0,0,0,0.8)]">
+                  {sorteo ? sorteo.nombre : 'EVENTO'}
                 </span>
               </h1>
               
               <p className="text-lg md:text-xl text-emerald-50 mb-8 max-w-xl mx-auto lg:mx-0 font-medium leading-relaxed [text-shadow:_0_2px_4px_rgba(0,0,0,0.5)]">
                 {sorteo ? 
-                  '¡Tu oportunidad de ganar autos, camionetas, motos y miles de soles en efectivo está aquí! Participa hoy de forma 100% segura respaldado por' 
+                  `¡Participa por ${totalPrizesCount} premios increíbles, incluyendo autos, camionetas, motos y efectivo! Todo 100% seguro respaldado por` 
                   : 'Mantente atento a nuestras redes para la siguiente gran oportunidad de cambiar tu vida respaldada por'
-                } <strong className="text-amber-400">Inversiones Finagro E.I.R.L.</strong>
+                } <strong className="text-amber-400">AGROINVERSIONES PERUVIAN ECOLOGIC S.A.C</strong>
               </p>
               
               {/* CONTEO REGRESIVO SOLO SI HAY FECHA */}
               {sorteo?.fecha_fin && (
                 <div className="mb-10">
-                  <p className="text-sm font-bold text-amber-400 uppercase tracking-widest mb-3 [text-shadow:_0_1px_2px_rgba(0,0,0,0.5)]">El sorteo se realizará en:</p>
+                  <p className="text-sm font-bold text-amber-400 uppercase tracking-widest mb-3 [text-shadow:_0_1px_2px_rgba(0,0,0,0.5)]">Tiempo restante para participar:</p>
                   <div className="flex flex-wrap justify-center lg:justify-start gap-2 md:gap-3">
                     {[
                       { label: 'Meses', value: timeLeft.meses },
@@ -203,17 +206,20 @@ export default function Welcome({ sorteo }) {
                   
                   <div className="bg-emerald-50/50 rounded-2xl p-5 mb-6 border border-emerald-100">
                     <p className="text-xs text-emerald-800 font-bold mb-3 uppercase text-center tracking-wider">Métodos de pago oficiales</p>
-                    <div className="flex justify-center gap-3">
-                      <div className="bg-[#742284] text-white px-6 py-2.5 rounded-xl font-black shadow-sm flex items-center justify-center w-full">
-                        YAPE
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="bg-white p-2 rounded-2xl shadow-inner border border-emerald-100">
+                        <img src="/images/qr-yape.png" alt="Yape QR" className="w-48 h-48 object-contain" />
                       </div>
-                      <div className="bg-[#00E0C6] text-[#0A2240] px-6 py-2.5 rounded-xl font-black shadow-sm flex items-center justify-center w-full">
-                        PLIN
+                      <div className="flex justify-center gap-3 w-full">
+                        <div className="bg-[#742284] text-white px-6 py-2.5 rounded-xl font-black shadow-sm flex items-center justify-center w-full">
+                          YAPE
+                        </div>
+                       
                       </div>
                     </div>
                     <div className="mt-4 pt-4 border-t border-emerald-100 text-center">
                       <p className="text-[10px] text-emerald-700 uppercase font-bold tracking-wider mb-1">A nombre de:</p>
-                      <p className="text-sm font-black text-slate-800">INVERSIONES FINAGRO E.I.R.L.</p>
+                      <p className="text-sm font-black text-slate-800">AGROINVERSIONES PERUVIAN ECOLOGIC S.A.C</p>
                     </div>
                   </div>
                   
@@ -233,14 +239,90 @@ export default function Welcome({ sorteo }) {
         </div>
       </section>
 
+      {/* SECCIÓN: OTROS SORTEOS ACTIVOS */}
+      {otrosSorteos.length > 0 && (
+        <section className="py-14 bg-white border-t border-slate-100">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-black text-slate-900 uppercase">Más Sorteos Activos</h2>
+              <div className="w-16 h-1.5 bg-emerald-500 mx-auto rounded-full mt-4"></div>
+              <p className="text-slate-500 mt-4 font-medium">¡Tienes más oportunidades de ganar! Participa en varios sorteos a la vez.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otrosSorteos.map((s) => {
+                const totalP = s.premios?.reduce((acc, p) => acc + parseInt(p.cantidad || 1), 0) || 0;
+                return (
+                  <div key={s.id} className="bg-white rounded-2xl border-2 border-slate-100 hover:border-emerald-300 shadow-sm hover:shadow-xl transition-all group overflow-hidden flex flex-col">
+                    {/* Banner superior */}
+                    <div className="relative h-36 bg-gradient-to-br from-emerald-800 to-emerald-600 flex items-center justify-center overflow-hidden">
+                      {s.imagen_hero ? (
+                        <img src={s.imagen_hero} alt={s.nombre} className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="absolute inset-0 opacity-10">
+                          <div className="absolute top-2 right-4 w-24 h-24 rounded-full bg-white/30"></div>
+                          <div className="absolute bottom-2 left-4 w-16 h-16 rounded-full bg-white/20"></div>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/80 to-transparent"></div>
+                      <div className="relative z-10 text-center px-4">
+                        <span className="inline-flex items-center gap-1.5 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow mb-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block"></span> En Vivo
+                        </span>
+                        <p className="text-white font-black text-lg leading-tight line-clamp-2">{s.nombre}</p>
+                      </div>
+                    </div>
+
+                    {/* Contenido */}
+                    <div className="p-5 flex flex-col flex-1">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Precio por ticket</p>
+                          <p className="text-2xl font-black text-emerald-700">S/ {parseFloat(s.precio_ticket).toFixed(2)}</p>
+                        </div>
+                        {totalP > 0 && (
+                          <div className="text-right">
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total premios</p>
+                            <p className="text-2xl font-black text-slate-800">{totalP}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {s.fecha_fin && (
+                        <p className="text-xs text-slate-500 font-medium mb-4 flex items-center gap-1.5">
+                          <span className="text-amber-500">📅</span>
+                          Sorteo: {new Date(s.fecha_fin).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        </p>
+                      )}
+
+                      <Link
+                        href="/login"
+                        className="mt-auto w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm group-hover:shadow-md"
+                      >
+                        <Ticket className="w-5 h-5" /> Participar en este sorteo
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* LISTA DE PREMIOS (Solo si hay premios en el DB) */}
       {prizes.length > 0 && (
         <section id="premios" className="py-16 bg-[#F8FAFC]">
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-black text-slate-900 uppercase">Lista de Premios</h2>
-              <div className="w-16 h-1.5 bg-amber-400 mx-auto rounded-full mt-4"></div>
-              <p className="text-slate-500 mt-4 font-medium">Más de {totalPrizesCount} oportunidades de ganar en nuestro sorteo.</p>
+              <h2 className="text-4xl md:text-5xl font-black text-slate-900 uppercase">
+                Gana Uno de los
+                <span className="block text-emerald-600 font-black mt-1">
+                  {totalPrizesCount} Premios
+                </span>
+              </h2>
+              <div className="w-16 h-1.5 bg-amber-400 mx-auto rounded-full mt-6"></div>
+              <p className="text-slate-500 mt-4 font-medium text-lg">Más de {totalPrizesCount} oportunidades de ganar en nuestro sorteo.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
@@ -272,7 +354,7 @@ export default function Welcome({ sorteo }) {
             </div>
             
             <div className="text-center mt-10">
-              <Link href="/mis-tickets" className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-8 py-3 rounded-xl transition-colors shadow-sm inline-flex items-center gap-2">
+              <Link href="/dashboard" className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-8 py-3 rounded-xl transition-colors shadow-sm inline-flex items-center gap-2">
                 <Ticket className="w-5 h-5"/> ¡Quiero participar por estos premios!
               </Link>
             </div>
