@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { 
   Ticket, Megaphone, Trophy, Users, LogOut, Menu, X, 
   AlertTriangle, Facebook, MessageCircle, Settings, Send 
@@ -7,6 +7,7 @@ import {
 
 export default function PublicLayout({ children, isLoggedIn = false, currentUser = null }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { settings = {} } = usePage().props;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 md:pb-0">
@@ -14,10 +15,11 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
       {/* HEADER CLARO Y AMIGABLE - AGRÓNOMO */}
       <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          {/* Logo con Planta/Sprout */}
-          <div className="flex items-center gap-2">
-            <Link href="/" className="cursor-pointer">
-              <img src="/images/logo-campoagro.png" alt="Campoagro Logo" className="h-10 md:h-12 w-auto" />
+          {/* Logo + Nombre empresa */}
+          <div className="flex items-center gap-3">
+            <Link href="/" className="cursor-pointer flex items-center gap-3">
+              <img src="/images/logo-campoagro.png" alt="Campoagro Logo" className="h-14 md:h-16 w-auto" />
+              <img src="/images/nombre.jpg" alt="CampoAgro" className="h-12 md:h-16 w-auto" />
             </Link>
           </div>
 
@@ -116,6 +118,7 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
           <div>
             <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
               <img src="/images/logo-campoagro.png" alt="Campoagro Logo" className="h-10 w-auto" />
+              <img src="/images/nombre.jpg" alt="CampoAgro" className="h-8 w-auto" />
             </div>
             <p className="mb-6 text-slate-500">Participa con confianza y gana grandes premios vehiculares, efectivo y tecnología con el sorteo más transparente, respaldado por el sector agrario.</p>
           </div>
@@ -146,26 +149,34 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
 
       {/* REDES SOCIALES FLOTANTES */}
       <div className="fixed bottom-24 right-4 md:bottom-8 md:right-8 z-50 flex flex-col gap-3">
-        <a href="#" className="bg-[#1877F2] text-white p-3 md:p-4 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center group relative">
-          <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Síguenos en Facebook</span>
-          <Facebook className="w-6 h-6 md:w-7 md:h-7 fill-current" />
-        </a>
-        <a href="#" className="bg-black text-white p-3 md:p-4 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center group relative">
-          <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Síguenos en TikTok</span>
-          <svg className="w-6 h-6 md:w-7 md:h-7" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-          </svg>
-        </a>
-        <a href="https://wa.me/51916408549" target="_blank" className="bg-[#25D366] text-white p-3 md:p-4 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center group relative">
-          <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Escríbenos al WhatsApp</span>
-          <MessageCircle className="w-6 h-6 md:w-7 md:h-7" />
-        </a>
+        {settings.link_redes && (
+          <a href={settings.link_redes} target="_blank" rel="noopener noreferrer" className="bg-[#1877F2] text-white p-3 md:p-4 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center group relative">
+            <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Síguenos en Facebook</span>
+            <Facebook className="w-6 h-6 md:w-7 md:h-7 fill-current" />
+          </a>
+        )}
+        
+        {settings.tiktok_url && (
+          <a href={settings.tiktok_url} target="_blank" rel="noopener noreferrer" className="bg-black text-white p-3 md:p-4 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center group relative">
+            <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Síguenos en TikTok</span>
+            <svg className="w-6 h-6 md:w-7 md:h-7" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+            </svg>
+          </a>
+        )}
+        
+        {settings.whatsapp && (
+          <a href={settings.whatsapp.startsWith('http') ? settings.whatsapp : `https://wa.me/${settings.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366] text-white p-3 md:p-4 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center group relative">
+            <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">Escríbenos al WhatsApp</span>
+            <MessageCircle className="w-6 h-6 md:w-7 md:h-7" />
+          </a>
+        )}
       </div>
 
       {/* MOBILE STICKY CTA BOTÓN */}
       <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-50 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
-        <Link href="https://wa.me/51916408549" target="_blank" className="w-full bg-[#25D366] text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_4px_0_#1DA851] active:shadow-none active:translate-y-1 transition-all">
-          <MessageCircle className="w-6 h-6" /> ¡Comprar Ticket S/40!
+        <Link href="/dashboard" className="w-full bg-[#25D366] text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_4px_0_#1DA851] active:shadow-none active:translate-y-1 transition-all">
+          <Ticket className="w-6 h-6" /> ¡Comprar Ticket S/40!
         </Link>
       </div>
     </div>

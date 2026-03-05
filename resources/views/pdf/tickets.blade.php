@@ -36,7 +36,7 @@
 @php
     $linkRedes = \App\Models\SiteSettings::get('link_redes', 'https://facebook.com/SorteosCampoAgroOficial');
     $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=' . urlencode($linkRedes);
-    // Extract display handle from URL
+    
     $handle = parse_url($linkRedes, PHP_URL_PATH);
     $handle = ltrim($handle ?? $linkRedes, '/');
 @endphp

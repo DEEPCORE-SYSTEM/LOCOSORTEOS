@@ -8,7 +8,7 @@ import {
 export default function AdminLayout({ children, currentView = 'admin-dashboard' }) {
   const { flash, globalPendingTicketsCount = 0, globalPendingTickets = [] } = usePage().props;
   const [toastMessage, setToastMessage] = useState(null);
-  const [toastType, setToastType] = useState('success'); // 'success' | 'error'
+  const [toastType, setToastType] = useState('success'); 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   useEffect(() => {
@@ -29,17 +29,19 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
     <div className="min-h-screen bg-[#F4F6F9] flex flex-col md:flex-row font-sans text-slate-900">
       {/* Admin Sidebar - VERDE AGRÓNOMO ORIGINAL */}
       <aside className="w-full md:w-64 bg-[#064E3B] text-slate-300 flex flex-col shrink-0 md:h-screen md:sticky md:top-0">
-        <div className="p-4 md:p-6 border-b border-emerald-800/50 flex justify-between items-center">
-          <div>
-            <Link href="/" className="flex items-center gap-2">
-              <img src="/images/logo-campoagro.png" alt="Campoagro Logo" className="h-10 w-auto brightness-0 invert" />
+        <div className="p-4 md:p-4 border-b border-emerald-800/50 flex justify-between items-center">
+          <div className="w-full">
+            <Link href="/" className="block w-full">
+              <div className="bg-white rounded-xl border-2 border-emerald-300 overflow-hidden   flex items-center justify-center gap-2 w-full">
+
+                <img src="/images/nombre.jpg" alt="CampoAgro" className="h-18 w-auto object-contain flex-shrink-0" />
+              </div>
             </Link>
-            <p className="text-[10px] font-bold tracking-widest text-emerald-400 uppercase mt-2">Panel Administrativo</p>
-          </div>
+           </div>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-x-auto md:overflow-y-auto flex md:flex-col gap-2 md:gap-0 [&::-webkit-scrollbar]:hidden text-sm">
           <Link href="/admin/dashboard" className={`flex items-center gap-3 shrink-0 md:w-full text-left px-4 py-3 rounded-xl font-bold transition-colors ${currentView === 'admin-dashboard' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-emerald-800 hover:text-white'}`}>
-            <LayoutDashboard className="w-5 h-5"/> <span className="inline">Resumen</span>
+            <LayoutDashboard className="w-5 h-5"/> <span className="inline">Dashboard</span>
           </Link>
           <Link href="/admin/sorteos" className={`flex items-center gap-3 shrink-0 md:w-full text-left px-4 py-3 rounded-xl font-bold transition-colors ${['admin-sorteos', 'admin-nuevo-sorteo'].includes(currentView) ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-emerald-800 hover:text-white'}`}>
             <Trophy className="w-5 h-5"/> <span className="inline">Gestión Sorteos</span>
@@ -66,11 +68,11 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
       </aside>
 
       {/* Admin Main Content */}
-      <main className="flex-1 w-full max-w-full overflow-y-auto p-4 md:p-8">
+      <main className="flex-1 w-full max-w-full overflow-y-auto p-8 md:p-8">
         {/* Header Superior del Main */}
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-black text-slate-900">
-            {currentView === 'admin-dashboard' && 'Resumen del Sistema'}
+            {currentView === 'admin-dashboard' }
             {currentView === 'admin-sorteos' && 'Administrar Sorteos'}
             {currentView === 'admin-nuevo-sorteo' && 'Crear Sorteo'}
             {currentView === 'admin-ejecucion' && 'Panel de Ejecución de Sorteo'}

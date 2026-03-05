@@ -44,7 +44,7 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
     return new Date(dateString).toISOString().slice(0, 16);
   };
 
-  // ── Filtros ──
+  
   const filtered = adminSorteos;
 
   const exportSorteosToCsv = () => {

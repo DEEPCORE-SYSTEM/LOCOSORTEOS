@@ -16,7 +16,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Seed default values
+        
         $defaults = [
             ['key' => 'hero_title',    'value' => '¡Gran Sorteo CampoAgro!'],
             ['key' => 'hero_subtitle', 'value' => 'Participa y gana increíbles premios'],

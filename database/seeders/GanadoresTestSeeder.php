@@ -21,7 +21,7 @@ class GanadoresTestSeeder extends Seeder
         $ganadoresToInsert = [];
 
         foreach ($tickets as $ticket) {
-            // Find a random prize for this sorteo
+            
             $premio = DB::table('premios')->where('sorteo_id', $ticket->sorteo_id)->inRandomOrder()->first();
 
             $ganadoresToInsert[] = [

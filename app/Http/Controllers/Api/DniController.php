@@ -34,7 +34,7 @@ class DniController extends Controller
             if ($response->successful()) {
                 $data = $response->json();
 
-                // Decolecta devuelve: full_name, first_name, first_last_name, second_last_name
+                
                 $nombreCompleto = $data['full_name']
                     ?? trim(($data['first_name'] ?? '') . ' ' . ($data['first_last_name'] ?? '') . ' ' . ($data['second_last_name'] ?? ''));
 

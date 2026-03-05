@@ -17,7 +17,7 @@ class LoadTestSeeder extends Seeder
     {
         $this->command->info('Empezando el sembrado masivo de datos para Load Testing...');
 
-        // 1. Crear 100 Sorteos
+        
         $this->command->info('Creando 100 sorteos con 10 premios cada uno...');
         $sorteosToInsert = [];
         $now = now();
@@ -31,7 +31,7 @@ class LoadTestSeeder extends Seeder
                 'precio_ticket' => rand(10, 50),
                 'fecha_inicio' => $now->copy()->subDays(rand(1, 30)),
                 'fecha_fin' => $now->copy()->addDays(rand(10, 60)),
-                'estado' => $i <= 10 ? 'activo' : 'programado', // 'inactivo' no existe en el enum
+                'estado' => $i <= 10 ? 'activo' : 'programado', 
                 'cantidad_tickets' => 100000,
                 'user_id' => $adminId,
                 'created_at' => $now,
@@ -42,7 +42,7 @@ class LoadTestSeeder extends Seeder
         
         $sorteoIds = DB::table('sorteos')->pluck('id')->toArray();
         
-        // Crear premios para los sorteos
+        
         foreach ($sorteoIds as $sId) {
             for ($p = 1; $p <= 10; $p++) {
                 $premiosToInsert[] = [
@@ -56,13 +56,13 @@ class LoadTestSeeder extends Seeder
             }
         }
         
-        // Ejecutar los premios en sub-chunks para evitar el placeholder limit de SQLite/MySQL
+        
         $premiosChunks = array_chunk($premiosToInsert, 1000);
         foreach($premiosChunks as $chunk) {
             DB::table('premios')->insert($chunk);
         }
 
-        // 2. Crear 10,000 Usuarios (Batch insert para no explotar RAM)
+        
         $this->command->info('Creando 10,000 usuarios...');
         $password = Hash::make('password');
         
@@ -90,7 +90,7 @@ class LoadTestSeeder extends Seeder
 
         $userIds = DB::table('users')->pluck('id')->toArray();
 
-        // 3. Crear 10,000 Ventas / Compras y Tickets asociados
+        
         $this->command->info('Generando 10,000 ventas (compras) y sus tickets...');
         $comprasCount = 10000;
         
@@ -103,7 +103,7 @@ class LoadTestSeeder extends Seeder
                 
                 $userId = $userIds[array_rand($userIds)];
                 $sorteoId = $sorteoIds[array_rand($sorteoIds)];
-                $cantidad = rand(1, 5); // 1 a 5 tickets por compra
+                $cantidad = rand(1, 5); 
                 $precio = DB::table('sorteos')->where('id', $sorteoId)->value('precio_ticket');
                 $total = $cantidad * $precio;
 
@@ -117,7 +117,7 @@ class LoadTestSeeder extends Seeder
                     'sorteo_id' => $sorteoId,
                     'total' => $total,
                     'metodo_pago' => ['yape', 'plin', 'transferencia', 'efectivo'][rand(0, 3)],
-                    'estado' => ['aprobado', 'pendiente', 'rechazado'][rand(0, 1)], // Más aprobados
+                    'estado' => ['aprobado', 'pendiente', 'rechazado'][rand(0, 1)], 
                     'comprobante' => null,
                     'detalles' => json_encode([
                         'cantidad' => $cantidad,
@@ -130,8 +130,8 @@ class LoadTestSeeder extends Seeder
                     'updated_at' => $now,
                 ];
                 
-                // Generar los tickets (sabiendo que podría haber colisiones en random, 
-                // pero para test de performance de UI es suficiente)
+                
+                
                 foreach($numerosComprados as $n) {
                     $ticketsToInsert[] = [
                         'sorteo_id' => $sorteoId,
@@ -146,7 +146,7 @@ class LoadTestSeeder extends Seeder
             }
             DB::table('compras')->insert($comprasToInsert);
             
-            // Insertar tickets en sub-batches de 1000 para no romper el placeholder limit
+            
             $ticketChunks = array_chunk($ticketsToInsert, 1000);
             foreach($ticketChunks as $chunk) {
                 DB::table('tickets')->insertOrIgnore($chunk);

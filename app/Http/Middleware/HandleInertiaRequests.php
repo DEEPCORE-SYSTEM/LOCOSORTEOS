@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\SiteSettings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -38,6 +40,19 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
             ],
+            'settings' => function () {
+                return Cache::remember('site_settings', 3600, function () {
+                    $s = SiteSettings::all_flat();
+                    return [
+                        'yape_numero'  => $s['yape_numero']  ?? '',
+                        'plin_numero'  => $s['plin_numero']   ?? '',
+                        'whatsapp'     => $s['whatsapp']      ?? '',
+                        'razon_social' => $s['razon_social']  ?? 'INVERSIONES CampoAgro E.I.R.L.',
+                        'link_redes'   => $s['link_redes']    ?? '',
+                        'tiktok_url'   => $s['tiktok_url']    ?? '',
+                    ];
+                });
+            },
             'globalPendingTicketsCount' => function () use ($request) {
                 if ($request->user() && $request->user()->is_admin) {
                     return \App\Models\Compra::where('estado', 'pendiente')->count();

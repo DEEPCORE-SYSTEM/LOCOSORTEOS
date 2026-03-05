@@ -20,7 +20,7 @@ class ExportController extends Controller
 
         $sorteo = Sorteo::findOrFail($sorteo_id);
 
-        // Fetch valid tickets (vendidos) - Optimized query
+        
         $tickets = Ticket::with(['user:id,name'])
             ->where('sorteo_id', $sorteo_id)
             ->where('estado', 'vendido')
@@ -28,7 +28,7 @@ class ExportController extends Controller
             ->select('id', 'numero', 'user_id', 'sorteo_id')
             ->get();
 
-        // Dividir tickets en páginas de 50 tickets por página (grilla alta densidad 10x5)
+        
         $chunks = $tickets->chunk(50);
 
         return view('pdf.tickets_export', [

@@ -16,20 +16,25 @@ use Inertia\Inertia;
 
 class PublicoController extends Controller
 {
-    // ── Estados de ticket disponibles para compra ─────────────────────────────
-    private const TICKET_ESTADOS_DISPONIBLES = ['disponible'];
+    // ─── Constantes ────────────────────────────────────────────────────────────
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // HELPERS PRIVADOS
-    // ─────────────────────────────────────────────────────────────────────────
+    private const TICKET_ESTADOS_DISPONIBLES = ['disponible'];
+    private const CACHE_SETTINGS_TTL         = 3600; // 1 hora
+    private const CACHE_MENSAJES_TTL         = 300;  // 5 minutos
+    private const GANADORES_RECIENTES_LIMIT  = 8;
+    private const GANADORES_PER_PAGE         = 24;
+    private const SEARCH_MAX_LENGTH          = 100;
+
+
+    // ─── Métodos privados de soporte ────────────────────────────────────────────
 
     /**
-     * Devuelve la configuración del sitio cacheada 1 hora.
+     * Devuelve la configuración del sitio cacheada.
      * Se invalida automáticamente al guardar configuración desde el admin.
      */
     private function getAppSettings(): array
     {
-        return Cache::remember('site_settings', 3600, function () {
+        return Cache::remember('site_settings', self::CACHE_SETTINGS_TTL, function () {
             $s = SiteSettings::all_flat();
             return [
                 'yape_numero'  => $s['yape_numero']  ?? '',
@@ -50,55 +55,109 @@ class PublicoController extends Controller
 
     /**
      * Obtiene los tickets disponibles de un sorteo (para grilla de selección).
+     * Devuelve una colección que se serializa como array en JSON (checkout e index esperan array).
      */
-    private function getTicketsDisponibles(int $sorteoId): \Illuminate\Support\Collection
+    private function getTicketsDisponibles(int $sorteoId, ?string $search = null): \Illuminate\Contracts\Pagination\Paginator
     {
-        return Ticket::where('sorteo_id', $sorteoId)
+        $q = Ticket::where('sorteo_id', $sorteoId)
             ->whereIn('estado', self::TICKET_ESTADOS_DISPONIBLES)
             ->select('id', 'numero', 'estado')
-            ->orderBy('numero')
-            ->get();
+            ->orderBy('numero');
+
+        if ($search) {
+            $q->where('numero', 'like', "%{$search}%");
+        }
+
+        return $q->simplePaginate(100)->withQueryString();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MÉTODOS PÚBLICOS
-    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Obtiene el primer sorteo activo con sus premios.
+     */
+    private function getSorteoActivo(bool $failOrNull = false): ?Sorteo
+    {
+        $query = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion,imagen,orden'])
+            ->where('estado', 'activo');
+
+        return $failOrNull ? $query->firstOrFail() : $query->first();
+    }
 
     /**
-     * Página pública principal (Home / Welcome).
+     * Obtiene los últimos ganadores del primer premio, cacheados y formateados.
      */
-    public function welcome()
+    private function getGanadoresRecientes(): \Illuminate\Support\Collection
     {
-        $sorteos      = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion,imagen'])
-            ->select('id', 'nombre', 'tipo', 'imagen_hero', 'descripcion', 'fecha_fin', 'precio_ticket', 'estado', 'cantidad_tickets')
-            ->where('estado', 'activo')
-            ->orderBy('fecha_fin', 'asc')
-            ->get();
-
-        $sorteo       = $sorteos->first();
-        $otrosSorteos = $sorteos->skip(1)->values();
-
-        $ganadores = Ganador::with([
+        return Ganador::with([
                 'sorteo:id,nombre',
                 'user:id,name',
                 'premio:id,descripcion,nombre,orden',
             ])
             ->whereHas('premio', fn($q) => $q->where('orden', 1))
             ->orderBy('created_at', 'desc')
-            ->take(8)
+            ->take(self::GANADORES_RECIENTES_LIMIT)
             ->get()
             ->map(fn($g) => [
                 'id'     => $g->id,
-                'name'   => $g->user?->name   ?? 'Ganador',
+                'name'   => $g->user?->name ?? 'Ganador',
                 'prize'  => $g->premio?->descripcion ?? $g->premio?->nombre ?? 'Premio Mayor',
                 'date'   => $g->created_at->format('d/m/Y'),
                 'sorteo' => $g->sorteo?->nombre ?? '',
             ]);
+    }
+
+    /**
+     * Mapea una colección de compras al formato de transacciones para el frontend.
+     */
+    private function mapTransacciones(\Illuminate\Support\Collection $compras): \Illuminate\Support\Collection
+    {
+        return $compras->map(fn($c) => [
+            'id'        => $this->formatTransactionId($c->id),
+            'compra_id' => $c->id,
+            'date'      => $c->created_at->format('Y-m-d H:i'),
+            'amount'    => (float) $c->total,
+            'status'    => match ($c->estado) {
+                'aprobado'  => 'Aprobado',
+                'rechazado' => 'Rechazado',
+                default     => 'Pendiente',
+            },
+            'draw'      => $c->sorteo?->nombre ?? '—',
+        ]);
+    }
+
+    /**
+     * Mapea un ganador al formato esperado por el frontend de la página pública.
+     */
+    private function mapGanadorPublico($g): array
+    {
+        return [
+            'id'     => $g->id,
+            'user'   => $g->user?->name  ?? 'Anónimo',
+            'dni'    => $g->user?->dni   ?? '—',
+            'ticket' => $g->ticket?->numero ?? '—',
+            'sorteo' => $g->sorteo?->nombre ?? '—',
+            'premio' => $g->premio?->nombre ?? '—',
+            'fecha'  => $g->created_at->format('d/m/Y'),
+        ];
+    }
+
+
+    // ─── Controladores públicos ─────────────────────────────────────────────────
+
+    /**
+     * Página pública principal (Home / Welcome).
+     */
+    public function welcome()
+    {
+        $sorteos = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion,imagen'])
+            ->select('id', 'nombre', 'tipo', 'imagen_hero', 'descripcion', 'fecha_fin', 'precio_ticket', 'estado', 'cantidad_tickets')
+            ->where('estado', 'activo')
+            ->orderBy('fecha_fin', 'asc')
+            ->get();
 
         return Inertia::render('Welcome', [
-            'sorteo'         => $sorteo,
-            'otrosSorteos'   => $otrosSorteos,
-            'ganadores'      => $ganadores,
+            'sorteo'         => $sorteos->first(),
+            'otrosSorteos'   => $sorteos->skip(1)->values(),
+            'ganadores'      => $this->getGanadoresRecientes(),
             'canLogin'       => Route::has('login'),
             'canRegister'    => Route::has('register'),
             'laravelVersion' => Application::VERSION,
@@ -107,17 +166,17 @@ class PublicoController extends Controller
     }
 
     /**
-     * Página pública para participar en el sorteo activo.
+     * Página principal del sorteo activo con selección de tickets.
      */
     public function index(Request $request)
     {
-        $sorteo = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion,imagen,orden'])
-            ->where('estado', 'activo')
-            ->firstOrFail();
+        $sorteo = $this->getSorteoActivo(failOrNull: true);
+
+        $search = $request->query('ticket_search');
 
         return Inertia::render('Publico/Index', [
             'sorteo'   => $sorteo,
-            'tickets'  => $this->getTicketsDisponibles($sorteo->id),
+            'tickets'  => $this->getTicketsDisponibles($sorteo->id, $search),
             'user'     => $request->user(),
             'settings' => $this->getAppSettings(),
         ]);
@@ -128,9 +187,9 @@ class PublicoController extends Controller
      */
     public function ganadores(Request $request)
     {
-        // Validar longitud máxima de búsqueda
         $search = $request->input('search');
-        if ($search && strlen($search) > 100) {
+
+        if ($search && strlen($search) > self::SEARCH_MAX_LENGTH) {
             abort(422, 'Búsqueda demasiado larga.');
         }
 
@@ -149,18 +208,8 @@ class PublicoController extends Controller
             });
         }
 
-        $ganadoresPaginated = $query->paginate(24)->withQueryString();
-
-        // Null-safe en cada campo mapeado
-        $ganadoresPaginated->getCollection()->transform(fn($g) => [
-            'id'     => $g->id,
-            'user'   => $g->user?->name   ?? 'Anónimo',
-            'dni'    => $g->user?->dni    ?? '—',
-            'ticket' => $g->ticket?->numero ?? '—',
-            'sorteo' => $g->sorteo?->nombre ?? '—',
-            'premio' => $g->premio?->nombre ?? '—',
-            'fecha'  => $g->created_at->format('d/m/Y'),
-        ]);
+        $ganadoresPaginated = $query->paginate(self::GANADORES_PER_PAGE)->withQueryString();
+        $ganadoresPaginated->getCollection()->transform(fn($g) => $this->mapGanadorPublico($g));
 
         return Inertia::render('Publico/Ganadores', [
             'ganadoresPaginated' => $ganadoresPaginated,
@@ -169,47 +218,50 @@ class PublicoController extends Controller
     }
 
     /**
-     * Panel del usuario autenticado: historial de compras + checkout.
-     * Usa first() (no firstOrFail) para mostrar el panel aunque no haya sorteo activo.
+     * Dashboard del usuario autenticado con historial de transacciones.
      */
     public function dashboard(Request $request)
     {
-        $sorteo = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion'])
-            ->where('estado', 'activo')
-            ->first(); // null si no hay sorteo activo → el frontend lo maneja
+        $sorteoIdRaw = $request->query('sorteo_id');
+        $sorteoId = is_array($sorteoIdRaw) ? (int) ($sorteoIdRaw[0] ?? 0) : (int) $sorteoIdRaw;
 
-        $transactions = Compra::with('sorteo:id,nombre')
-            ->where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(fn($c) => [
-                'id'     => $this->formatTransactionId($c->id),
-                'date'   => $c->created_at->format('Y-m-d H:i'),
-                'amount' => (float) $c->total,
-                'status' => match ($c->estado) {
-                    'aprobado'  => 'Aprobado',
-                    'rechazado' => 'Rechazado',
-                    default     => 'Pendiente',
-                },
-                'draw'   => $c->sorteo?->nombre ?? '—',
-            ]);
+        $querySorteos = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion,imagen,orden'])
+            ->where('estado', 'activo');
+
+        $sorteosActivos = $querySorteos->get();
+
+        if ($sorteoId > 0) {
+            $sorteo = $sorteosActivos->firstWhere('id', $sorteoId) ?? $sorteosActivos->first();
+        } else {
+            $sorteo = $sorteosActivos->first();
+        }
+
+        $search = $request->query('ticket_search');
+        $tickets = $sorteo ? $this->getTicketsDisponibles($sorteo->id, $search) : [];
+
+        $transactions = $this->mapTransacciones(
+            Compra::with('sorteo:id,nombre')
+                ->where('user_id', $request->user()->id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+        );
 
         return Inertia::render('User/Checkout', [
             'sorteo'              => $sorteo,
+            'sorteosActivos'      => $sorteosActivos,
             'initialTransactions' => $transactions,
             'currentUser'         => $request->user(),
-            'tickets'             => $sorteo ? $this->getTicketsDisponibles($sorteo->id) : [],
+            'tickets'             => $tickets,
             'settings'            => $this->getAppSettings(),
         ]);
     }
 
     /**
-     * Página pública de difusión de mensajes y comunicados.
-     * Cacheada 5 minutos (se invalida en AdminDashboardController al crear/editar).
+     * Página de difusión / mensajes broadcast.
      */
     public function difusion()
     {
-        $mensajes = Cache::remember('broadcast_messages', 300, function () {
+        $mensajes = Cache::remember('broadcast_messages', self::CACHE_MENSAJES_TTL, function () {
             return Mensaje::orderBy('created_at', 'desc')
                 ->get()
                 ->map(fn($m) => [
@@ -223,6 +275,103 @@ class PublicoController extends Controller
 
         return Inertia::render('Publico/Difusion', [
             'broadcastMessages' => $mensajes,
+        ]);
+    }
+
+    /**
+     * Actualiza los datos de contacto y ubicación del usuario autenticado.
+     */
+    public function updateProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'telefono'     => ['nullable', 'string', 'max:20'],
+            'departamento' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $user = $request->user();
+        $user->telefono = $validated['telefono'];
+        $user->departamento = $validated['departamento'];
+        $user->save();
+
+        return back()->with('success', '¡Tus datos han sido actualizados exitosamente!');
+    }
+
+    /**
+     * Muestra los tickets/números de una compra del usuario (propia, cualquier estado).
+     */
+    public function verTickets(Request $request, int $id)
+    {
+        $compra = Compra::with(['sorteo:id,nombre,prefijo_ticket', 'tickets:id,sorteo_id,numero,estado'])
+            ->where('user_id', $request->user()->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $ticketsList = [];
+
+        if ($compra->estado === 'aprobado') {
+            $tickets = $compra->tickets;
+            if ($tickets->isEmpty() && !empty($compra->detalles['numeros_asignados'])) {
+                $tickets = Ticket::where('sorteo_id', $compra->sorteo_id)
+                    ->whereIn('numero', $compra->detalles['numeros_asignados'])
+                    ->orderBy('numero')
+                    ->get(['id', 'sorteo_id', 'numero', 'estado']);
+            }
+            $ticketsList = $tickets->map(fn($t) => [
+                'id'     => $t->id,
+                'numero' => $t->numero,
+                'estado' => $t->estado,
+            ])->values()->all();
+        } else {
+            $raw = $compra->detalles['numeros_manuales'] ?? [];
+            $numerosManuales = array_filter(array_map('intval', (array) $raw));
+            $cantidad = (int) ($compra->detalles['cantidad'] ?? 0);
+            if (!empty($numerosManuales)) {
+                $ticketsFromDb = Ticket::whereIn('id', $numerosManuales)
+                    ->orderBy('numero')
+                    ->get(['id', 'numero']);
+                foreach ($ticketsFromDb as $t) {
+                    $ticketsList[] = [
+                        'id'     => $t->id,
+                        'numero' => $t->numero,
+                        'estado' => $compra->estado,
+                    ];
+                }
+            }
+            if (empty($ticketsList) && $cantidad > 0) {
+                for ($i = 0; $i < $cantidad; $i++) {
+                    $ticketsList[] = [
+                        'id'     => 'p-' . $i,
+                        'numero' => $compra->estado === 'pendiente' ? 'Por asignar' : '—',
+                        'estado' => $compra->estado,
+                    ];
+                }
+            }
+        }
+
+        return Inertia::render('User/VerTickets', [
+            'compra'  => [
+                'id'           => $compra->id,
+                'estado'       => $compra->estado,
+                'total'        => (float) $compra->total,
+                'fecha'        => $compra->created_at->format('d/m/Y H:i'),
+                'transaccion'  => $this->formatTransactionId($compra->id),
+            ],
+            'sorteo'  => $compra->sorteo ? [
+                'id'     => $compra->sorteo->id,
+                'nombre' => $compra->sorteo->nombre,
+            ] : null,
+            'tickets' => $ticketsList,
+        ]);
+    }
+
+    /**
+     * Endpoint API para cargar tickets paginados (utilizado por el botón "Cargar más").
+     */
+    public function apiTickets(Request $request, int $sorteoId)
+    {
+        $search = $request->query('ticket_search');
+        return response()->json([
+            'tickets' => $this->getTicketsDisponibles($sorteoId, $search)
         ]);
     }
 }

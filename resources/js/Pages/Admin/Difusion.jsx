@@ -68,7 +68,7 @@ export default function Difusion({ broadcastMessagesPaginated, filters = {} }) {
     router.get('/admin/difusion', { perPage: val }, { preserveState: true, replace: true });
   };
 
-  // ── Crear mensaje ──
+  
   const { data, setData, post, processing, reset, errors } = useForm({
     title: '',
     content: '',
@@ -80,7 +80,7 @@ export default function Difusion({ broadcastMessagesPaginated, filters = {} }) {
     post('/admin/difusion', { onSuccess: () => reset() });
   };
 
-  // ── Settings ──
+  
   const [settings, setSettings] = useState({
     link_redes: '', tiktok_url: '', whatsapp: '', yape_numero: '', plin_numero: '',
   });
@@ -323,30 +323,6 @@ export default function Difusion({ broadcastMessagesPaginated, filters = {} }) {
                   </button>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Info card */}
-          <div className="bg-gradient-to-br from-emerald-900 to-emerald-800 rounded-2xl p-5 text-white shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                <BellRing className="w-4 h-4 text-amber-300" />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-sm leading-tight">¿Cómo funciona la Difusión?</h4>
-                <p className="text-[11px] text-emerald-200 mt-1.5 leading-relaxed">
-                  Los mensajes que publicas aquí aparecen de forma destacada en las páginas de los clientes
-                  activos. Úsalos para anunciar ganadores, cambios de fecha, últimos tickets disponibles
-                  o recordatorios de pago.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {['Alertas urgentes', 'Noticias del sorteo', 'Promociones'].map(tag => (
-                    <span key={tag} className="text-[10px] font-bold bg-white/15 px-2.5 py-1 rounded-full text-emerald-100">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
 

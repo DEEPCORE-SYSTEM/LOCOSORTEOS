@@ -11,6 +11,7 @@ export default function AppLayout({ children, currentUser }) {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <img src="/images/logo-campoagro.png" alt="Campoagro Logo" className="h-8 md:h-10 w-auto" />
+            <img src="/images/nombre.jpg" alt="CampoAgro" className="h-6 md:h-8 w-auto" />
           </Link>
 
           {/* User Info / Links */}

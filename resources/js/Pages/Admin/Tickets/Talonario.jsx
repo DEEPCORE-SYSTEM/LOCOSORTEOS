@@ -19,10 +19,10 @@ export default function Talonario({
   countReservados,
   countLibres,
   fetchTicketsPage,
-  activeSorteo
+  activeSorteo,
+  setExportModalOpen,
 }) {
   const [showOfflineModal, setShowOfflineModal] = useState(false);
-  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [selectedOfflineTicket, setSelectedOfflineTicket] = useState('');
   const [offlineProcessing, setOfflineProcessing] = useState(false);
   const [isConsultandoDni, setIsConsultandoDni] = useState(false);
@@ -43,7 +43,7 @@ export default function Talonario({
     total: 0
   });
 
-  // Calculate total automatically based on selection
+  
   useEffect(() => {
     let cant = 1;
     if (data.modo_seleccion === 'manual' && data.numeros_text) {
@@ -412,45 +412,6 @@ export default function Talonario({
         </div>
       )}
 
-      {exportModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col max-h-[95vh]">
-            <div className="p-6 border-b border-slate-100 bg-slate-800 flex justify-between items-center text-white relative overflow-hidden shrink-0">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full blur-3xl opacity-30 -translate-y-1/2 translate-x-1/3"></div>
-              <div className="relative z-10 flex items-center gap-3">
-                <div className="bg-emerald-500/20 p-2 rounded-lg"><Upload className="w-6 h-6 text-emerald-400" /></div>
-                <div>
-                  <h3 className="font-black text-xl">Exportar Talonario Físico</h3>
-                  <p className="text-xs text-slate-300 font-medium">Extraer números libres para impresión</p>
-                </div>
-              </div>
-              <button onClick={() => setExportModalOpen(false)} className="relative z-10 text-slate-400 hover:text-white transition-colors p-1"><X className="w-6 h-6" /></button>
-            </div>
-
-            <div className="p-6 overflow-y-auto flex flex-col lg:flex-row gap-8">
-              <div className="flex-1 space-y-6">
-                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 text-amber-800">
-                  <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <p className="text-sm font-medium leading-relaxed">
-                    Al generar el talonario, los números libres seleccionados cambiarán a estado <span className="font-bold text-purple-700">"Impreso / En Calle"</span> y ya no podrán ser comprados por internet.
-                  </p>
-                </div>
-                <form id="exportForm" className="space-y-6" onSubmit={(e) => {
-                  e.preventDefault();
-                  setExportModalOpen(false);
-                  alert("Generando PDF... Los números cambiarán a estado 'Impresos'");
-                }}>
-                    <p className="text-sm text-slate-600 font-bold">Esta funcionalidad se conectará en el siguiente paso.</p>
-                </form>
-              </div>
-            </div>
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
-              <button type="button" onClick={() => setExportModalOpen(false)} className="px-6 py-3 font-bold text-slate-600 hover:text-slate-900 transition-colors">Cancelar</button>
-              <button form="exportForm" type="submit" className="px-8 py-3 font-black text-white bg-slate-800 hover:bg-slate-900 rounded-xl transition-all shadow-md">Confirmar y Generar PDF</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

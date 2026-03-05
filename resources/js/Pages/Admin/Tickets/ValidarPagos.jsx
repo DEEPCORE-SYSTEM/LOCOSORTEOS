@@ -147,13 +147,13 @@ export default function ValidarPagos({ pendientesPaginated, searchQuery, setSear
             </p>
             <div className="flex gap-1 flex-wrap justify-end">
               {pendientesLinks.map((link, idx) => {
-                // Ensure query parameters are maintained in the URL
+                
                 let url = link.url;
                 if (url) {
                   const urlObj = new URL(url);
                   if (searchQuery) urlObj.searchParams.set('search', searchQuery);
                   if (perPage && perPage !== 25) urlObj.searchParams.set('perPage', perPage);
-                  // Keep us on the pending tab when navigating
+                  
                   urlObj.searchParams.set('tab', 'admin-tickets');
                   url = urlObj.toString();
                 }

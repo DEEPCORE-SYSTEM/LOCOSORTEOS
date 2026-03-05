@@ -17,7 +17,9 @@ class Sorteo extends Model
         'cantidad_tickets',
         'precio_ticket',
         'estado',
-        'user_id'
+        'user_id',
+        'prefijo_ticket',
+        'digitos_ticket'
     ];
 
     public function tickets()

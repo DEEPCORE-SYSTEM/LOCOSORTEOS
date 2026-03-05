@@ -13,19 +13,19 @@ class AdminDashboardController extends Controller
         $today = now()->startOfDay();
         $startOfWeek = now()->startOfWeek();
         
-        // 1. STATS SECTION
+        
         $pendingTicketsCount = \App\Models\Compra::where('estado', 'pendiente')->count();
         $activeSorteosCount = \App\Models\Sorteo::whereIn('estado', ['activo', 'programado'])->count();
         
         $totalTicketsSold = \App\Models\Ticket::where('estado', 'vendido')->count();
         $ticketsSoldToday = \App\Models\Ticket::where('estado', 'vendido')->where('created_at', '>=', $today)->count();
         
-        // Revenue Total (suma de todas las compras aprobadas)
+        
         $totalRevenue = \App\Models\Compra::where('estado', 'aprobado')->sum('total');
         $revenueThisWeek = \App\Models\Compra::where('estado', 'aprobado')->where('created_at', '>=', $startOfWeek)->sum('total');
         $revenuePct = $totalRevenue > 0 ? round(($revenueThisWeek / $totalRevenue) * 100, 1) : 0;
 
-        // 2. VENTAS DE LA SEMANA (Últimos 7 días)
+        
         $ventasSemana = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
@@ -33,12 +33,12 @@ class AdminDashboardController extends Controller
                 ->whereDate('created_at', $date->toDateString())
                 ->count();
             $ventasSemana[] = [
-                'day' => $date->locale('es')->shortDayName, // Lun, Mar, etc
+                'day' => $date->locale('es')->shortDayName, 
                 'tickets' => $count
             ];
         }
 
-        // 3. RENDIMIENTO POR SORTEO (Top 3 Activos)
+        
         $rendimientoSorteos = \App\Models\Sorteo::whereIn('estado', ['activo', 'programado'])
             ->withCount(['tickets as sold' => function($q) { $q->where('estado', 'vendido'); }])
             ->take(3)
@@ -49,7 +49,7 @@ class AdminDashboardController extends Controller
                     'id' => $s->id,
                     'name' => $s->nombre,
                     'price' => $s->precio_ticket,
-                    'status' => ucfirst($s->estado), // Activo / Programado
+                    'status' => ucfirst($s->estado), 
                     'sold' => $s->sold,
                     'total_tickets' => $s->cantidad_tickets,
                     'progress' => $progress,
@@ -57,7 +57,7 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-        // 4. TRANSACCIONES RECIENTES
+        
         $transacciones = \App\Models\Compra::with('user:id,name')
             ->orderBy('created_at', 'desc')
             ->take(5)
@@ -74,8 +74,8 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-        // 5. ORIGEN DE PAGOS 
-        // Filtramos solo métodos específicos para el chart, agrupados
+        
+        
         $metodos = \App\Models\Compra::selectRaw('metodo_pago, sum(total) as revenue')
             ->where('estado', 'aprobado')
             ->whereIn('metodo_pago', ['yape', 'plin', 'transferencia', 'efectivo', 'web'])
@@ -90,16 +90,16 @@ class AdminDashboardController extends Controller
             'efectivo' => ['amount' => $metodos['efectivo'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['efectivo'] ?? 0) / $totalMetodos) * 100) : 0]
         ];
 
-        // 6. TOP DEPARTAMENTOS
+        
         $topDeptos = \App\Models\Ticket::join('users', 'tickets.user_id', '=', 'users.id')
             ->whereNotNull('users.departamento')
-            ->where('tickets.estado', 'vendido') // Sólo tickets vendidos reales
+            ->where('tickets.estado', 'vendido') 
             ->selectRaw('users.departamento, count(tickets.id) as total')
             ->groupBy('users.departamento')
             ->orderByDesc('total')
             ->take(3)
             ->get();
-        // Fallback robusto en caso de que no haya data de departamentos en BD
+        
         $deptFallback = [];
         if ($topDeptos->isEmpty()) {
             $deptFallback = [
@@ -160,7 +160,7 @@ class AdminDashboardController extends Controller
                 'sold'                => $s->sold ?? 0,
                 'total'               => $s->cantidad_tickets,
                 'revenue'             => ($s->sold ?? 0) * $s->precio_ticket,
-                // Campos para edición en modal
+                
                 'nombre'              => $s->nombre,
                 'descripcion'         => $s->descripcion,
                 'estado'              => $s->estado,
@@ -205,6 +205,8 @@ class AdminDashboardController extends Controller
             'cantidad_tickets' => 'required|integer|min:1',
             'precio_ticket' => 'required|numeric|min:0',
             'estado' => 'required|string',
+            'prefijo_ticket' => 'nullable|string|max:20',
+            'digitos_ticket' => 'nullable|integer|min:1|max:10',
             'premios' => 'nullable|array',
             'premios.*.nombre' => 'required|string',
             'premios.*.descripcion' => 'nullable|string',
@@ -220,7 +222,9 @@ class AdminDashboardController extends Controller
             $sorteo->premios()->createMany($data['premios']);
         }
 
-        return redirect()->route('admin.sorteos')->with('success', 'Sorteo creado exitosamente.');
+        \App\Jobs\GenerarTicketsJob::dispatch($sorteo);
+
+        return redirect()->route('admin.sorteos')->with('success', 'Sorteo creado exitosamente. Se están generando los tickets en segundo plano.');
     }
 
     public function editSorteo($id)
@@ -244,6 +248,8 @@ class AdminDashboardController extends Controller
             'cantidad_tickets' => 'required|integer|min:1',
             'precio_ticket' => 'required|numeric|min:0',
             'estado' => 'required|string',
+            'prefijo_ticket' => 'nullable|string|max:20',
+            'digitos_ticket' => 'nullable|integer|min:1|max:10',
             'premios' => 'nullable|array',
             'premios.*.nombre' => 'required|string',
             'premios.*.descripcion' => 'nullable|string',
@@ -307,7 +313,7 @@ class AdminDashboardController extends Controller
         $perPage = $request->input('perPage', 25);
         $limit = $perPage === 'todos' ? 999999 : (int) $perPage;
 
-        // Extract Pending Purchases separately
+        
         $pendientesQuery = \App\Models\Compra::with(['user:id,name,dni', 'sorteo:id,nombre'])
             ->where('estado', 'pendiente');
 
@@ -348,7 +354,7 @@ class AdminDashboardController extends Controller
 
         if ($search) {
             $query->where(function($q) use ($search) {
-                // Remove 'COMPRA-' prefix if user pasted it
+                
                 $cleanSearch = str_ireplace('COMPRA-', '', $search);
 
                 $q->whereHas('user', function($q2) use ($search) {
@@ -381,7 +387,7 @@ class AdminDashboardController extends Controller
             ->whereIn('estado', ['activo', 'programado'])
             ->get();
 
-        $ticketsData = []; // Removido para optimizar velocidad LCP. Se carga via API async en frontend.
+        $ticketsData = []; 
 
         return Inertia::render('Admin/Tickets', [
             'comprasPaginated' => $comprasPaginated,
@@ -608,7 +614,7 @@ class AdminDashboardController extends Controller
         $allowed = [
             'hero_title', 'hero_subtitle', 'hero_fecha', 'link_redes',
             'yape_numero', 'plin_numero', 'whatsapp', 'tiktok_url',
-            'razon_social',  // razón social mostrada en la página de pago
+            'razon_social',  
         ];
 
         foreach ($allowed as $key) {
@@ -617,7 +623,7 @@ class AdminDashboardController extends Controller
             }
         }
 
-        // Invalidar cache para que los cambios sean inmediatos en el frontend
+        
         \Illuminate\Support\Facades\Cache::forget('site_settings');
 
         return response()->json(['status' => 'ok']);

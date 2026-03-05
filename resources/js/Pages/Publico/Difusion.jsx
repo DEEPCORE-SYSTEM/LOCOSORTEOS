@@ -4,7 +4,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, Megaphone, BellRing, Facebook, MessageCircle, Send } from 'lucide-react';
 
 export default function Difusion({ broadcastMessages = [] }) {
-  const { auth } = usePage().props;
+  const { auth, settings = {} } = usePage().props;
 
   return (
     <PublicLayout isLoggedIn={!!auth?.user} currentUser={auth?.user}>
@@ -29,13 +29,23 @@ export default function Difusion({ broadcastMessages = [] }) {
                 Únete a nuestras comunidades para enterarte antes que nadie sobre nuevos sorteos, promociones relámpago y transmisiones en vivo.
               </p>
 
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <a href="#" className="bg-[#25D366] hover:bg-[#20B858] text-white font-black px-6 py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105">
-                  <MessageCircle className="w-6 h-6" /> Unirme a WhatsApp
-                </a>
-                <a href="#" className="bg-[#0088cc] hover:bg-[#0077b5] text-white font-black px-6 py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105">
-                  <Send className="w-6 h-6" /> Unirme a Telegram
-                </a>
+              <div className="flex justify-center gap-4 flex-wrap">
+                {settings.whatsapp && (
+                  <a href={settings.whatsapp.startsWith('http') ? settings.whatsapp : `https://wa.me/${settings.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366] hover:bg-[#20B858] text-white font-black px-6 py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105">
+                    <MessageCircle className="w-6 h-6" /> Unirme a WhatsApp
+                  </a>
+                )}
+                {settings.link_redes && (
+                  <a href={settings.link_redes} target="_blank" rel="noopener noreferrer" className="bg-[#1877F2] hover:bg-[#155fc2] text-white font-black px-6 py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105">
+                    <Facebook className="w-6 h-6" /> Ver Facebook
+                  </a>
+                )}
+                {settings.tiktok_url && (
+                  <a href={settings.tiktok_url} target="_blank" rel="noopener noreferrer" className="bg-black hover:bg-zinc-800 text-white font-black px-6 py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105">
+                    <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                    Seguir en TikTok
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -64,9 +74,11 @@ export default function Difusion({ broadcastMessages = [] }) {
                     </p>
 
                     <div className="mt-4 flex gap-3 pl-2">
-                      <button className="text-sm font-bold text-emerald-600 flex items-center gap-1 hover:text-emerald-800 transition-colors">
-                        <Facebook className="w-4 h-4" /> Ver en Facebook
-                      </button>
+                      {settings.link_redes && (
+                        <a href={settings.link_redes} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-emerald-600 flex items-center gap-1 hover:text-emerald-800 transition-colors">
+                          <Facebook className="w-4 h-4" /> Ver en Facebook
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))

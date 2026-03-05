@@ -15,7 +15,7 @@ export default function HistorialTickets({
   const paginationLinks = comprasPaginated?.links || [];
 
   const handleExportCsv = () => {
-      // Export logic to be implemented or passed from parent if needed
+      
       alert('Funcionalidad de exportación en desarrollo.');
   };
 
@@ -129,7 +129,7 @@ export default function HistorialTickets({
                   const urlObj = new URL(url);
                   if (searchQuery) urlObj.searchParams.set('search', searchQuery);
                   if (perPage && perPage !== 25) urlObj.searchParams.set('perPage', perPage);
-                  // Keep us on the correct tab
+                  
                   urlObj.searchParams.set('tab', 'admin-lista-tickets');
                   url = urlObj.toString();
                 }

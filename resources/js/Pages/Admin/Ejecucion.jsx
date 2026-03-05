@@ -49,7 +49,7 @@ export default function Ejecucion({ sorteosData = [] }) {
     setIsSpinning(true);
     setDrawnTicket(null);
     
-    // Obtener ganador del backend silenciosamente mientras la UI gira
+    
     let fetchedWinner = null;
     let fetchError = false;
     try {

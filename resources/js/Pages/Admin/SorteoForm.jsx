@@ -23,7 +23,9 @@ export default function SorteoForm({ sorteo }) {
     fecha_fin: formatDateForInput(sorteo?.fecha_fin) || '',
     cantidad_tickets: sorteo?.cantidad_tickets || 10000,
     precio_ticket: sorteo?.precio_ticket || 40,
-    estado: sorteo?.estado || 'borrador', 
+    estado: sorteo?.estado || 'borrador',
+    prefijo_ticket: sorteo?.prefijo_ticket || '',
+    digitos_ticket: sorteo?.digitos_ticket || 3,
     premios: sorteo?.premios?.length > 0 ? sorteo.premios : [
       { id: Date.now(), nombre: 'Vehículo', descripcion: '', imagen: '', orden: 1 }
     ],
@@ -201,10 +203,57 @@ export default function SorteoForm({ sorteo }) {
             </div>
           </div>
 
-          {/* SECCIÓN 3: IMÁGENES Y BANNERS */}
+          {/* SECCIÓN 3: CÓDIGO DEL TICKET */}
           <div>
             <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2 mb-4">
-               <span className="text-emerald-600 bg-emerald-50 rounded-full w-6 h-6 flex items-center justify-center">3</span> Imágenes y Banners
+              <span className="text-emerald-600 bg-emerald-50 rounded-full w-6 h-6 flex items-center justify-center">3</span> Formato del Código de Ticket
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Prefijo (opcional)</label>
+                <input
+                  type="text"
+                  value={data.prefijo_ticket}
+                  onChange={e => setData('prefijo_ticket', e.target.value)}
+                  maxLength={20}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none font-mono text-sm uppercase"
+                  placeholder="Ej: CD-"
+                />
+                <p className="text-xs text-slate-400 mt-1">Letras, números, guión. Ej: <code className="bg-slate-100 px-1 rounded">CD-</code></p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Dígitos del número (1–10)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={data.digitos_ticket}
+                  onChange={e => setData('digitos_ticket', Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none font-mono text-sm"
+                />
+                <p className="text-xs text-slate-400 mt-1">Cantidad de dígitos con ceros a la izquierda.</p>
+              </div>
+
+              {/* Preview en vivo */}
+              <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Vista previa</p>
+                <p className="font-mono font-black text-2xl text-emerald-800 tracking-wider">
+                  {(data.prefijo_ticket || '') + String(1).padStart(Math.max(1, parseInt(data.digitos_ticket) || 3), '0')}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">Primer ticket generado</p>
+              </div>
+
+            </div>
+            {errors.prefijo_ticket && <p className="text-red-500 text-xs mt-2">{errors.prefijo_ticket}</p>}
+            {errors.digitos_ticket && <p className="text-red-500 text-xs mt-2">{errors.digitos_ticket}</p>}
+          </div>
+
+          {/* SECCIÓN 4: IMÁGENES Y BANNERS */}
+          <div>
+            <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2 mb-4">
+               <span className="text-emerald-600 bg-emerald-50 rounded-full w-6 h-6 flex items-center justify-center">4</span> Imágenes y Banners
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
@@ -267,10 +316,10 @@ export default function SorteoForm({ sorteo }) {
             </div>
           </div>
 
-          {/* SECCIÓN 4: PREMIOS OFRECIDOS */}
+          {/* SECCIÓN 5: PREMIOS OFRECIDOS */}
           <div>
             <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2 mb-4">
-              <span className="text-emerald-600 bg-emerald-50 rounded-full w-6 h-6 flex items-center justify-center">4</span> Plan de Premios Ofrecidos
+              <span className="text-emerald-600 bg-emerald-50 rounded-full w-6 h-6 flex items-center justify-center">5</span> Plan de Premios Ofrecidos
             </h4>
             
             <div className="space-y-4">

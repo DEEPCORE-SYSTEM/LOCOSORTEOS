@@ -14,7 +14,7 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
   const [comprobante, setComprobante] = useState(null);
   const [comprobantePreview, setComprobantePreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState(1); // 1: seleccionar tickets, 2: pagar
+  const [step, setStep] = useState(1); 
   const fileRef = useRef(null);
 
   const isLoggedIn  = !!user;
@@ -22,7 +22,7 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
   const razonSocial = settings.razon_social || 'INVERSIONES CampoAgro E.I.R.L.';
 
 
-  // ── Tiempo real via Echo ──
+  
   useEffect(() => {
     if (!window.Echo) return;
     const channel = window.Echo.channel(`sorteo.${sorteo.id}`);
@@ -72,7 +72,7 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
     });
   };
 
-  // ── Referencia colores ──
+  
   const ticketClass = (ticket) => {
     if (ticket.estado === "vendido") return "bg-red-400 text-white cursor-not-allowed opacity-70 scale-95";
     if (seleccionados.includes(ticket.id)) return "bg-emerald-500 text-white ring-2 ring-emerald-300 scale-105 shadow-lg shadow-emerald-200";

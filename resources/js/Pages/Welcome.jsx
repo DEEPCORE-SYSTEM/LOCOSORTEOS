@@ -208,11 +208,11 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
                     <p className="text-xs text-emerald-800 font-bold mb-3 uppercase text-center tracking-wider">Métodos de pago oficiales</p>
                     <div className="flex flex-col items-center gap-4">
                       <div className="bg-white p-2 rounded-2xl shadow-inner border border-emerald-100">
-                        <img src="/images/qr-yape.png" alt="Yape QR" className="w-48 h-48 object-contain" />
+                        <img src="/images/qryape.png" alt="Yape QR" className="w-52 h-52 object-contain" />
                       </div>
                       <div className="flex justify-center gap-3 w-full">
-                        <div className="bg-[#742284] text-white px-6 py-2.5 rounded-xl font-black shadow-sm flex items-center justify-center w-full">
-                          YAPE
+                        <div className="bg-[#742284] text-white px-15 py-3.5 rounded-xl font-black shadow-sm flex flex-col items-center justify-center w-full">
+                          <span className="text-base font-bold tracking-widest mt-1.5">916 408 549</span>
                         </div>
                        
                       </div>
@@ -373,44 +373,34 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
               <p className="text-slate-500 mt-2">Los ganadores más afortunados de nuestras últimas ediciones.</p>
             </div>
 
-            <div className="relative group/carousel mb-10">
-              <button 
-                onClick={() => scrollCarousel('left')} 
-                className="absolute left-0 top-1/2 -translate-y-1/2 -ml-5 z-20 bg-white p-3 rounded-full shadow-lg border border-slate-100 text-slate-600 hover:text-emerald-600 hover:scale-110 transition-all hidden md:flex opacity-0 group-hover/carousel:opacity-100 items-center justify-center"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-
-              <div 
-                ref={carouselRef}
-                className="flex overflow-x-auto gap-4 md:gap-6 snap-x snap-mandatory pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-              >
-                {grandWinners.map((winner) => (
-                  <div key={winner.id} className="min-w-[160px] md:min-w-[240px] shrink-0 snap-start bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group relative hover:border-emerald-200 transition-colors">
-                    <div className="bg-slate-100 aspect-square flex items-center justify-center relative overflow-hidden">
-                      <ImageIcon className="w-12 h-12 text-slate-300" />
-                      <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors"></div>
-                      <div className="absolute top-2 right-2 bg-amber-400 text-slate-900 text-xs font-black px-2 py-1 rounded-md shadow-sm">
-                        {winner.date}
+            <div className="relative overflow-hidden flex mb-10 pb-4 group/carousel">
+              {/* Duplicamos la lista para crear el efecto de scroll infinito continuo */}
+              {[...Array(2)].map((_, index) => (
+                <div 
+                  key={index} 
+                  className="flex gap-4 md:gap-6 px-2 md:px-3 animate-marquee group-hover/carousel:[animation-play-state:paused] min-w-max"
+                  aria-hidden={index === 1 ? 'true' : 'false'}
+                >
+                  {grandWinners.map((winner) => (
+                    <div key={`${winner.id}-${index}`} className="w-[160px] md:w-[240px] shrink-0 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group relative hover:border-emerald-200 transition-colors">
+                      <div className="bg-slate-100 aspect-square flex items-center justify-center relative overflow-hidden">
+                        <ImageIcon className="w-12 h-12 text-slate-300" />
+                        <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors"></div>
+                        <div className="absolute top-2 right-2 bg-amber-400 text-slate-900 text-xs font-black px-2 py-1 rounded-md shadow-sm">
+                          {winner.date}
+                        </div>
+                      </div>
+                      <div className="p-4 text-center">
+                        <p className="font-bold text-slate-800 text-sm mb-1">{winner.name}</p>
+                        <p className="text-emerald-600 font-black text-sm mb-3">{winner.prize}</p>
+                        <button className="text-slate-500 text-xs font-bold uppercase hover:text-emerald-700 transition-colors flex items-center justify-center gap-1 mx-auto bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full">
+                          Ver publicación <ChevronRight className="w-3 h-3" />
+                        </button>
                       </div>
                     </div>
-                    <div className="p-4 text-center">
-                      <p className="font-bold text-slate-800 text-sm mb-1">{winner.name}</p>
-                      <p className="text-emerald-600 font-black text-sm mb-3">{winner.prize}</p>
-                      <button className="text-slate-500 text-xs font-bold uppercase hover:text-emerald-700 transition-colors flex items-center justify-center gap-1 mx-auto bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full">
-                        Ver publicación <ChevronRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button 
-                onClick={() => scrollCarousel('right')} 
-                className="absolute right-0 top-1/2 -translate-y-1/2 -mr-5 z-20 bg-white p-3 rounded-full shadow-lg border border-slate-100 text-slate-600 hover:text-emerald-600 hover:scale-110 transition-all hidden md:flex opacity-0 group-hover/carousel:opacity-100 items-center justify-center"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
+                  ))}
+                </div>
+              ))}
             </div>
 
             <div className="text-center">

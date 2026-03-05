@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ganadores', function (Blueprint $table) {
-            // Agregar sorteo_id para poder navegar directamente desde Ganador a su Sorteo
+            
             $table->foreignId('sorteo_id')->nullable()->after('user_id')->constrained()->nullOnDelete();
         });
     }

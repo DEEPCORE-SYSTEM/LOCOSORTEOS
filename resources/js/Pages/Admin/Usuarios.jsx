@@ -18,9 +18,9 @@ export default function Usuarios({ adminUsersPaginated, sorteosData = [], filter
   const [userStatusFilter, setUserStatusFilter] = useState(params.get('status') || 'todos');
   const [userDrawFilter, setUserDrawFilter] = useState(params.get('draw') || 'todos');
   const [userPerPage, setUserPerPage] = useState(filters.perPage || 25);
-  const [historialModal, setHistorialModal] = useState(null); // user obj
+  const [historialModal, setHistorialModal] = useState(null); 
 
-  // Edit State
+  
   const [editingUserId, setEditingUserId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', dni: '', phone: '' });
 
@@ -114,13 +114,6 @@ export default function Usuarios({ adminUsersPaginated, sorteosData = [], filter
     if (window.confirm(actionText)) {
       router.post(`/admin/usuarios/${userId}/toggle-status`, {}, {
         preserveScroll: true,
-        onSuccess: () => {
-          setAdminUsers(prev =>
-            prev.map(user =>
-              user.id === userId ? { ...user, status: newStatus } : user
-            )
-          );
-        }
       });
     }
   };
@@ -139,13 +132,6 @@ export default function Usuarios({ adminUsersPaginated, sorteosData = [], filter
     router.put(`/admin/usuarios/${userId}`, editForm, {
       preserveScroll: true,
       onSuccess: () => {
-        setAdminUsers(prev =>
-          prev.map(user =>
-            user.id === userId
-              ? { ...user, name: editForm.name, dni: editForm.dni, phone: editForm.phone }
-              : user
-          )
-        );
         setEditingUserId(null);
       }
     });
@@ -155,7 +141,6 @@ export default function Usuarios({ adminUsersPaginated, sorteosData = [], filter
     if (window.confirm(`¿Eliminar definitivamente la cuenta de ${userName}?\nSolo se puede si no tiene compras activas.`)) {
       router.delete(`/admin/usuarios/${userId}`, {
         preserveScroll: true,
-        onSuccess: () => setAdminUsers(prev => prev.filter(u => u.id !== userId)),
       });
     }
   };
@@ -164,7 +149,7 @@ export default function Usuarios({ adminUsersPaginated, sorteosData = [], filter
   const clientesActivos = adminUsers.filter(u => u.totalTickets > 0).length;
   const cuentasBaneadas = adminUsers.filter(u => u.status === 'bloqueado').length;
 
-  // Draw filter uses backend-provided sorteos list
+  
 
   return (
     <AdminLayout currentView="admin-users" pendingTicketsCount={pendingTicketsCount}>

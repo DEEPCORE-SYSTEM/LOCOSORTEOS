@@ -21,29 +21,34 @@ class GenerarTicketsJob implements ShouldQueue
     public function handle(): void
     {
         $cantidad = $this->sorteo->cantidad_tickets;
+        $digitos  = $this->sorteo->digitos_ticket ?? 5;
+        $prefijo  = $this->sorteo->prefijo_ticket ? trim($this->sorteo->prefijo_ticket) . '' : '';
 
         $batch = [];
         $chunkSize = 1000; 
 
         for ($i = 1; $i <= $cantidad; $i++) {
 
+            $numeroPadded = str_pad($i, $digitos, '0', STR_PAD_LEFT);
+            $numeroFinal  = $prefijo . $numeroPadded;
+
             $batch[] = [
                 'sorteo_id' => $this->sorteo->id,
-                'numero' => str_pad($i, 5, '0', STR_PAD_LEFT),
+                'numero' => $numeroFinal,
                 'estado' => 'disponible',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
 
             if (count($batch) === $chunkSize) {
-                Ticket::insert($batch);
+                Ticket::insertOrIgnore($batch);
                 $batch = [];
             }
         }
 
         
         if (!empty($batch)) {
-            Ticket::insert($batch);
+            Ticket::insertOrIgnore($batch);
         }
     }
 }

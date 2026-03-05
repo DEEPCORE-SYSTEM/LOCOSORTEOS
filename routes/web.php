@@ -6,7 +6,7 @@ use App\Http\Controllers\SorteoEjecucionController;
 use App\Http\Controllers\User\CheckoutController;
 use Illuminate\Support\Facades\Route;
 
-// ─── Rutas Públicas ────────────────────────────────────────────────────────────
+
 
 Route::get('/', [PublicoController::class, 'welcome'])->name('home');
 
@@ -14,18 +14,21 @@ Route::get('/ganadores', [PublicoController::class, 'ganadores'])->name('publico
 
 Route::get('/difusion', [PublicoController::class, 'difusion'])->name('publico.difusion');
 
-// ─── Ruta de la API de DNI ─────────────────────────────────────────────────────
+
 
 Route::post('/api/consultar-dni', [\App\Http\Controllers\Api\DniController::class, 'consultar'])->name('api.consultar_dni');
+Route::get('/api/sorteos/{sorteo}/tickets', [PublicoController::class, 'apiTickets'])->name('api.sorteos.tickets');
 
-// ─── Rutas Autenticadas del Usuario ────────────────────────────────────────────
+
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [PublicoController::class, 'dashboard'])->name('dashboard');
+    Route::get('/mis-compras/{compra}/tickets', [PublicoController::class, 'verTickets'])->name('user.compras.tickets');
     Route::post('/comprar', [CheckoutController::class, 'store'])->name('comprar');
+    Route::post('/perfil/actualizar', [PublicoController::class, 'updateProfile'])->name('perfil.update');
 });
 
-// ─── Perfil de Usuario ─────────────────────────────────────────────────────────
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -33,7 +36,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// ─── Admin ─────────────────────────────────────────────────────────────────────
+
 
 Route::post('/sorteos/{id}/ejecutar', [SorteoEjecucionController::class, 'ejecutar'])
     ->middleware('role:admin');

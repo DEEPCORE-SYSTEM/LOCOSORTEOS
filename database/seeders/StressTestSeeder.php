@@ -24,7 +24,7 @@ class StressTestSeeder extends Seeder
     {
         $this->command->info('=== STRESS TEST SEEDER ===');
 
-        // ── 1. ADMIN ──────────────────────────────────────────────────────────
+        
         $admin = User::firstOrCreate(
             ['dni' => '00000001'],
             [
@@ -37,7 +37,7 @@ class StressTestSeeder extends Seeder
             ]
         );
 
-        // Asignar rol Spatie si el role existe
+        
         try {
             if (!\Spatie\Permission\Models\Role::where('name', 'admin')->exists()) {
                 \Spatie\Permission\Models\Role::create(['name' => 'admin', 'guard_name' => 'web']);
@@ -49,7 +49,7 @@ class StressTestSeeder extends Seeder
 
         $this->command->info('[OK] Admin creado (dni: 00000001 / pass: password)');
 
-        // ── 2. USUARIOS (120 participantes) ───────────────────────────────────
+        
         $this->command->info('Creando 120 usuarios participantes...');
         $departamentos = ['Lima', 'Arequipa', 'Cusco', 'La Libertad', 'Piura', 'Junín', 'Cajamarca', 'Puno'];
         $users = [];
@@ -66,14 +66,14 @@ class StressTestSeeder extends Seeder
                     'departamento'   => $departamentos[array_rand($departamentos)],
                     'tipo_registro'  => rand(0, 1) ? 'web' : 'fisico',
                     'is_admin'       => false,
-                    'estado'         => $i % 15 === 0 ? 'bloqueado' : 'activo', // cada 15 → bloqueado
+                    'estado'         => $i % 15 === 0 ? 'bloqueado' : 'activo', 
                 ]
             );
             $users[] = $u;
         }
         $this->command->info('[OK] 120 usuarios creados. ('.count(array_filter($users, fn($u) => $u->estado === 'bloqueado')).' bloqueados)');
 
-        // ── 3. SORTEOS ────────────────────────────────────────────────────────
+        
         $this->command->info('Creando 5 sorteos con premios...');
 
         $sorteosData = [
@@ -163,7 +163,7 @@ class StressTestSeeder extends Seeder
         }
         $this->command->info('[OK] 5 sorteos creados con ' . array_sum(array_map(fn($sd) => count($sd['premios'] ?? []), $sorteosData)) . ' premios en total');
 
-        // ── 4. COMPRAS y TICKETS ──────────────────────────────────────────────
+        
         $this->command->info('Generando compras y tickets (~180 compras)...');
 
         $metodoPago = ['yape', 'plin', 'transferencia', 'efectivo'];
@@ -174,7 +174,7 @@ class StressTestSeeder extends Seeder
         foreach ($sorteos as $sorteo) {
             $ticketsOcupados = [];
 
-            // Número de compras por sorteo según su tamaño
+            
             $numCompras = match(true) {
                 $sorteo->cantidad_tickets <= 50  => 20,
                 $sorteo->cantidad_tickets <= 200 => 40,
@@ -186,7 +186,7 @@ class StressTestSeeder extends Seeder
                 $cantidad = rand(1, 5);
                 $metodoPagoSel = $metodoPago[array_rand($metodoPago)];
 
-                // Distribuir estados: 60% aprobado, 25% pendiente, 15% rechazado
+                
                 $rand = rand(1, 100);
                 $estado = match(true) {
                     $rand <= 60 => 'aprobado',
@@ -216,7 +216,7 @@ class StressTestSeeder extends Seeder
 
                 $totalCompras++;
 
-                // Si aprobado → generar tickets reales
+                
                 if ($estado === 'aprobado') {
                     for ($t = 0; $t < $cantidad; $t++) {
                         $num = $this->generarNumeroLibre($ticketsOcupados, $sorteo->cantidad_tickets);
@@ -243,7 +243,7 @@ class StressTestSeeder extends Seeder
 
         $this->command->info("[OK] {$totalCompras} compras, {$totalTickets} tickets generados.");
 
-        // ── 5. EJECUTAR BOMBO en sorteos 'finalizado' ─────────────────────────
+        
         $this->command->info('Ejecutando bombo en sorteos finalizados...');
         $sorteosFinalizados = Sorteo::where('estado', 'finalizado')->get();
         $totalGanadores = 0;
@@ -266,14 +266,14 @@ class StressTestSeeder extends Seeder
                 if (!isset($ticketsVendidosIds[$index])) break;
                 $ticket = Ticket::find($ticketsVendidosIds[$index]);
 
-                // Verificar que no exista ya un ganador para este sorteo+premio
+                
                 $existe = Ganador::where('premio_id', $premio->id)->exists();
                 if (!$existe) {
                     Ganador::create([
                         'premio_id'   => $premio->id,
                         'ticket_id'   => $ticket->id,
                         'user_id'     => $ticket->user_id,
-                        'sorteo_id'   => $sorteo->id, // ← campo extra para consultas
+                        'sorteo_id'   => $sorteo->id, 
                         'fecha_sorteo'=> now()->subDays(rand(1, 10)),
                     ]);
                     $totalGanadores++;
@@ -283,7 +283,7 @@ class StressTestSeeder extends Seeder
         }
         $this->command->info("[OK] {$totalGanadores} ganadores registrados.");
 
-        // ── 6. MENSAJES DE DIFUSIÓN ───────────────────────────────────────────
+        
         $this->command->info('Creando mensajes de difusión...');
         $mensajes = [
             ['title' => '🎉 ¡Nuevo Sorteo Disponible!',       'content' => 'Participa en el Sorteo Aniversario LOCO 2026. Solo S/.20 por ticket.',  'type' => 'promo'],
@@ -297,7 +297,7 @@ class StressTestSeeder extends Seeder
         }
         $this->command->info('[OK] 5 mensajes de difusión creados.');
 
-        // ── 7. RESUMEN FINAL ──────────────────────────────────────────────────
+        
         $this->command->newLine();
         $this->command->info('══════════════════════════════════');
         $this->command->info('         RESUMEN STRESS TEST       ');
@@ -319,17 +319,17 @@ class StressTestSeeder extends Seeder
             ]
         );
 
-        // ── 8. VERIFICACIÓN DE BUGS ───────────────────────────────────────────
+        
         $this->command->newLine();
         $this->command->info('══════════════════════════════════');
         $this->command->info('       VERIFICACIÓN DE BUGS       ');
         $this->command->info('══════════════════════════════════');
 
-        // Bug #1: Revenue cuenta con 'pagado' pero deben ser 'vendido'
+        
         $revenueBugQuery = Sorteo::withCount(['tickets as sold_bug' => function($q) {
-            $q->where('estado', 'pagado'); // Bug original
+            $q->where('estado', 'pagado'); 
         }])->withCount(['tickets as sold_fix' => function($q) {
-            $q->where('estado', 'vendido'); // Fix correcto
+            $q->where('estado', 'vendido'); 
         }])->get();
 
         $this->command->info('[BUG #1] Revenue usando estado="pagado" vs "vendido":');
@@ -339,15 +339,15 @@ class StressTestSeeder extends Seeder
             $this->command->line("  Sorteo [{$s->nombre}]: BUG→S/{$revenueBug} | CORRECTO→S/{$revenueFix}");
         }
 
-        // Bug #2: generarNumeroLibre con >999 tickets (demostración)
+        
         $this->command->info('[BUG #2] Generación de números para sorteos con >999 tickets:');
-        $ocupados999 = range(1, 999); // Simulamos 999 ocupados
+        $ocupados999 = range(1, 999); 
         for ($i = 0; $i < 3; $i++) {
             $num = $this->generarNumeroLibre($ocupados999, 9999);
             $this->command->line("  Número generado cuando 1-999 están ocupados: '{$num}' (longitud: " . strlen((string)$num) . ")");
         }
 
-        // Bug #4: Ganador sin relaciones Eloquent
+        
         $this->command->info('[BUG #4] Ganador::with([relaciones]) — probar navegación Eloquent:');
         try {
             $g = Ganador::with(['ticket', 'user', 'premio'])->first();
@@ -389,7 +389,7 @@ class StressTestSeeder extends Seeder
             }
             $intentos++;
         }
-        return null; // cupo agotado
+        return null; 
     }
 
     /**

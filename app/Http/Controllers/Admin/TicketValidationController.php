@@ -17,7 +17,7 @@ class TicketValidationController extends Controller
         $perPage = $request->input('perPage', 25);
         $limit = $perPage === 'todos' ? 999999 : (int) $perPage;
 
-        // Extract Pending Purchases separately, paginated
+        
         $pendientesQuery = Compra::with(['user', 'sorteo'])
             ->where('estado', 'pendiente')
             ->orderBy('created_at', 'desc');
@@ -58,7 +58,7 @@ class TicketValidationController extends Controller
 
         if ($search) {
             $query->where(function($q) use ($search) {
-                // Remove 'COMPRA-' prefix if user pasted it
+                
                 $cleanSearch = str_ireplace('COMPRA-', '', $search);
 
                 $q->whereHas('user', function($q2) use ($search) {
@@ -104,7 +104,7 @@ class TicketValidationController extends Controller
             foreach ($reservas as $reserva) {
                 $manuales = $reserva->detalles['numeros_manuales'] ?? [];
                 foreach ($manuales as $num) {
-                    $numStr = str_pad($num, 3, '0', STR_PAD_LEFT); 
+                    $numStr = $this->formatearNumeroTicket($num, $sorteo);
                     if (!isset($tickets[$numStr])) {
                         $tickets[$numStr] = 'reservado';
                     }
@@ -131,30 +131,24 @@ class TicketValidationController extends Controller
         }
 
         DB::transaction(function () use ($compra) {
-            $compra->update(['estado' => 'aprobado']);
-            
             $cantidad = $compra->detalles['cantidad'] ?? 1;
             $modo = $compra->detalles['modo_seleccion'] ?? 'random';
             $numerosManuales = $compra->detalles['numeros_manuales'] ?? [];
 
-            
             $ticketsOcupados = Ticket::where('sorteo_id', $compra->sorteo_id)->pluck('numero')->toArray();
 
             $nuevosTickets = [];
 
             if ($modo === 'manual' && count($numerosManuales) == $cantidad) {
-                
                 foreach ($numerosManuales as $num) {
                     if (!in_array($num, $ticketsOcupados)) {
-                         $nuevosTickets[] = $num;
+                        $nuevosTickets[] = $num;
                     } else {
-                         
-                         $nuevosTickets[] = $this->generarNumeroLibre($ticketsOcupados, $compra->sorteo_id);
-                         $ticketsOcupados[] = end($nuevosTickets); 
+                        $nuevosTickets[] = $this->generarNumeroLibre($ticketsOcupados, $compra->sorteo_id);
+                        $ticketsOcupados[] = end($nuevosTickets);
                     }
                 }
             } else {
-                
                 for ($i = 0; $i < $cantidad; $i++) {
                     $num = $this->generarNumeroLibre($ticketsOcupados, $compra->sorteo_id);
                     $nuevosTickets[] = $num;
@@ -162,16 +156,30 @@ class TicketValidationController extends Controller
                 }
             }
 
-            
+            $sorteo = \App\Models\Sorteo::find($compra->sorteo_id);
+            $numerosAsignados = [];
+            $ticketIds = [];
+
             foreach ($nuevosTickets as $numStr) {
-                Ticket::create([
+                $numeroFormateado = $this->formatearNumeroTicket($numStr, $sorteo);
+                $ticket = Ticket::create([
                     'sorteo_id' => $compra->sorteo_id,
-                    'numero' => str_pad($numStr, 3, '0', STR_PAD_LEFT),
+                    'numero' => $numeroFormateado,
                     'estado' => 'vendido',
                     'user_id' => $compra->user_id,
                     'fecha_venta' => now()
                 ]);
+                $numerosAsignados[] = $numeroFormateado;
+                $ticketIds[] = $ticket->id;
             }
+
+            $compra->tickets()->attach($ticketIds);
+            $detalles = $compra->detalles ?? [];
+            $detalles['numeros_asignados'] = $numerosAsignados;
+            $compra->update([
+                'estado' => 'aprobado',
+                'detalles' => $detalles
+            ]);
         });
 
         return redirect()->back()->with('success', 'Pago aprobado y tickets generados exitosamente.');
@@ -226,8 +234,8 @@ class TicketValidationController extends Controller
                 ]
             );
 
-            // Update user details if they existed but had placeholder/old data
-            // (Optional, but good for keeping contact info fresh)
+            
+            
             if ($user->telefono == '000000000' || $user->telefono == '-') {
                 $user->update(['telefono' => $request->telefono, 'name' => $request->nombre]);
             }
@@ -258,22 +266,24 @@ class TicketValidationController extends Controller
 
             
             $ticketsOcupados = Ticket::where('sorteo_id', $compra->sorteo_id)->pluck('numero')->toArray();
+            $sorteo = \App\Models\Sorteo::find($compra->sorteo_id);
 
             if ($modo === 'manual' && count($numerosManuales) > 0) {
                 foreach ($numerosManuales as $num) {
-                    $numPad = str_pad($num, 3, '0', STR_PAD_LEFT);
-                    
-                    if (in_array($numPad, $ticketsOcupados)) {
-                        $ticketExistente = Ticket::where('sorteo_id', $compra->sorteo_id)->where('numero', $numPad)->first();
+                    // Acepta tanto número puro como código con prefijo
+                    $numFormatado = $this->formatearNumeroTicket($num, $sorteo);
+
+                    if (in_array($numFormatado, $ticketsOcupados)) {
+                        $ticketExistente = Ticket::where('sorteo_id', $compra->sorteo_id)->where('numero', $numFormatado)->first();
                         if ($ticketExistente && in_array($ticketExistente->estado, ['vendido', 'reservado'])) {
-                             abort(422, "El ticket {$numPad} ya no está disponible.");
+                             abort(422, "El ticket {$numFormatado} ya no está disponible.");
                         }
                     }
 
                     Ticket::updateOrCreate(
                         [
-                            'sorteo_id' => $compra->sorteo_id, 
-                            'numero' => $numPad
+                            'sorteo_id' => $compra->sorteo_id,
+                            'numero' => $numFormatado
                         ],
                         [
                             'estado' => 'vendido',
@@ -287,7 +297,7 @@ class TicketValidationController extends Controller
                     $numStr = $this->generarNumeroLibre($ticketsOcupados, $compra->sorteo_id);
                     Ticket::create([
                         'sorteo_id' => $compra->sorteo_id,
-                        'numero' => str_pad($numStr, 3, '0', STR_PAD_LEFT),
+                        'numero' => $numStr, // ya formateado por generarNumeroLibre
                         'estado' => 'vendido',
                         'user_id' => $compra->user_id,
                         'fecha_venta' => now()
@@ -302,21 +312,40 @@ class TicketValidationController extends Controller
 
     private function generarNumeroLibre($ocupados, $sorteo_id)
     {
-        // Obtener el límite real del sorteo
         $sorteo = \App\Models\Sorteo::find($sorteo_id);
-        $max = $sorteo ? min((int)$sorteo->cantidad_tickets, 9999) : 999;
-        $padLen = strlen((string)$max); // 3 para <=999, 4 para >999
+        $max = $sorteo ? (int)$sorteo->cantidad_tickets : 999;
 
         for ($i = 0; $i < 2000; $i++) {
             $num = rand(1, $max);
-            $candidato = str_pad($num, $padLen, '0', STR_PAD_LEFT);
-            if (!in_array($candidato, $ocupados) && !in_array($num, $ocupados)) {
+            $candidato = $this->formatearNumeroTicket($num, $sorteo);
+            if (!in_array($candidato, $ocupados)) {
                 return $candidato;
             }
         }
 
-        // Si después de 2000 intentos no hay espacio, abortar con mensaje claro
-        abort(422, "El sorteo está lleno. No quedan números disponibles.");
+        abort(422, 'El sorteo está lleno. No quedan números disponibles.');
+    }
+
+    /**
+     * Formatea un número de ticket aplicando el prefijo y los dígitos configurados en el sorteo.
+     * Ejemplo: formatearNumeroTicket(1, $sorteo con prefijo="CD-" digitos=5) → "CD-00001"
+     * Si el valor ya contiene letras/guión (es alfanumérico), lo retorna tal cual.
+     */
+    private function formatearNumeroTicket($numero, $sorteo): string
+    {
+        // Si ya tiene formato alfanumérico no numérico puro, devolver tal cual
+        if (!is_numeric(str_replace(['-', ' ', '_'], '', $numero)) === false && preg_match('/[a-zA-Z]/', (string)$numero)) {
+            return (string)$numero;
+        }
+
+        $digitos = $sorteo?->digitos_ticket ?? 3;
+        $prefijo = $sorteo?->prefijo_ticket ?? '';
+
+        // Extrae solo los dígitos si el número ya tiene prefijo pegado
+        $soloNumero = preg_replace('/[^0-9]/', '', (string)$numero);
+        $numeroPadded = str_pad((int)$soloNumero, $digitos, '0', STR_PAD_LEFT);
+
+        return $prefijo . $numeroPadded;
     }
 
     public function exportPdf(Request $request)
@@ -342,15 +371,12 @@ class TicketValidationController extends Controller
             ], 422);
         }
 
-        $padLen = strlen((string)min($sorteo->cantidad_tickets, 9999));
-        $padLen = max($padLen, 3); // Mínimo 3 dígitos
-        
         $numerosRequeridos = [];
         for ($i = $desde; $i <= $hasta; $i++) {
-            $numerosRequeridos[] = str_pad($i, $padLen, '0', STR_PAD_LEFT);
+            $numerosRequeridos[] = $this->formatearNumeroTicket($i, $sorteo);
         }
 
-        // Verificar si algún boleto en el rango ya está ocupado (vendido, reservado, impreso)
+        
         $ocupados = Ticket::where('sorteo_id', $sorteo->id)
             ->whereIn('numero', $numerosRequeridos)
             ->pluck('numero')->toArray();
@@ -362,11 +388,11 @@ class TicketValidationController extends Controller
             ], 422);
         }
 
-        // Generar lote de impresión (bloquea los tickets como 'impreso')
+        
         DB::transaction(function () use ($sorteo, $numerosRequeridos, $request) {
-            $adminUserId = auth()->id() ?? 1; // Asignamos al generador (vendedor de origen genérico o null si refactorizamos bd)
+            $adminUserId = auth()->id() ?? 1; 
             
-            // Creamos un dummy user o asignamos a un usuario "Impresión Física" 
+            
             $userOffline = \App\Models\User::firstOrCreate(
                 ['email' => 'impresion_' . $sorteo->id . '@sorteos.local'],
                 [
@@ -378,7 +404,7 @@ class TicketValidationController extends Controller
                 ]
             );
 
-            // Generamos los tickets marcados como impreso (en calle)
+            
             $ticketsData = [];
             $now = now();
             foreach ($numerosRequeridos as $numStr) {
@@ -393,7 +419,7 @@ class TicketValidationController extends Controller
                 ];
             }
             
-            // Inserción batch para rendimiento
+            
             $chunks = array_chunk($ticketsData, 500);
             foreach ($chunks as $chunk) {
                 Ticket::insert($chunk);
@@ -404,7 +430,7 @@ class TicketValidationController extends Controller
             $filename = "Talonario_{$sorteo->id}_{$desde}_{$hasta}.xlsx";
             $filePath = "exports/{$filename}";
             
-            // Cola y Chunking configurados en la clase Export
+            
             (new \App\Exports\TicketsExport($sorteo->id, $numerosRequeridos))->queue($filePath, 'public');
             
             return response()->json([
@@ -414,7 +440,7 @@ class TicketValidationController extends Controller
             ]);
         }
 
-        // Crear y guardar PDF con Spatie en el disco público
+        
         $pdfFilename = "Talonario_{$sorteo->id}_{$desde}_{$hasta}.pdf";
         $pdfRelativePath = "exports/{$pdfFilename}";
 
@@ -425,10 +451,10 @@ class TicketValidationController extends Controller
             ])
             ->format('A4');
 
-        // Guardar el archivo en storage/app/public/exports
+        
         $pdf->save(storage_path("app/public/{$pdfRelativePath}"));
 
-        // Devolver la URL pública del PDF
+        
         return response()->json([
             'status' => 'success',
             'url' => asset("storage/{$pdfRelativePath}")
@@ -464,8 +490,8 @@ class TicketValidationController extends Controller
         $compra = Compra::findOrFail($id);
 
         DB::transaction(function () use ($compra) {
-            // Free the tickets associated with this purchase.
-            // Since there is no `compra_id` on tickets, we match by user, sorteo, and close timestamp.
+            
+            
             Ticket::where('sorteo_id', $compra->sorteo_id)
                 ->where('user_id', $compra->user_id)
                 ->whereBetween('fecha_venta', [
