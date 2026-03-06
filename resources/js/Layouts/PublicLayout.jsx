@@ -128,7 +128,6 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
               <li><Link href="/dashboard" className="hover:text-emerald-600 transition">Ver Mis Tickets</Link></li>
               <li><Link href="/difusion" className="hover:text-emerald-600 transition">Canal de Difusión</Link></li>
               <li><Link href="/ganadores" className="hover:text-emerald-600 transition">Ganadores</Link></li>
-              <li><Link href="/admin/dashboard" className="hover:text-emerald-600 transition text-emerald-600 font-bold flex items-center gap-1 justify-center md:justify-start"><Settings className="w-3 h-3"/> Panel Admin</Link></li>
             </ul>
           </div>
           <div>

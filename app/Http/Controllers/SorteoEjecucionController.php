@@ -49,10 +49,12 @@ class SorteoEjecucionController extends Controller
                     $ticketGanador = Ticket::find($ticketId);
 
                     Ganador::create([
-                        'premio_id' => $premio->id,
-                        'ticket_id' => $ticketGanador->id,
-                        'user_id' => $ticketGanador->user_id,
+                        'premio_id'    => $premio->id,
+                        'ticket_id'    => $ticketGanador->id,
+                        'user_id'      => $ticketGanador->user_id,
+                        'sorteo_id'    => $sorteo->id,
                         'fecha_sorteo' => now(),
+                        'tipo'         => 'automatico',
                     ]);
 
                     $ticketsUsados[] = $ticketId;

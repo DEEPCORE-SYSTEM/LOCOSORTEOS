@@ -1,55 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, Trophy, ChevronRight, Search } from 'lucide-react';
 
-export default function Ganadores({ ganadoresPaginated, filters = {} }) {
-  const ganadores = ganadoresPaginated?.data || [];
-  const paginationLinks = ganadoresPaginated?.links || [];
-  const [winnersTab, setWinnersTab] = useState('reciente');
+export default function Ganadores({ sorteosPaginated, filters = {} }) {
+  const sorteos = sorteosPaginated?.data || [];
+  const paginationLinks = sorteosPaginated?.links || [];
+  
+  // Tab activa: por defecto 'all' para mostrar todos, o el ID de un sorteo específico
+  const [activeSorteoTab, setActiveSorteoTab] = useState('all');
   const [filterCategory, setFilterCategory] = useState('Todos');
-  const [filterLocation, setFilterLocation] = useState('Todas las ciudades');
+  const [filterLocation, setFilterLocation] = useState('Todos los lugares');
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
 
-  const locationsList = ['Todas las ciudades', 'Lima', 'Arequipa', 'Trujillo', 'Chiclayo'];
-  const grandWinners = []; 
+  // Extraemos lista dinámica de departamentos según los ganadores cargados
+  const locationsList = useMemo(() => {
+    const allDepartamentos = sorteos.flatMap(sorteo => sorteo.winners.map(w => w.departamento || 'Desconocida'));
+    const uniqueLocations = [...new Set(allDepartamentos)].filter(loc => loc.trim() !== '');
+    return ['Todos los lugares', ...uniqueLocations.sort()];
+  }, [sorteos]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     router.get('/ganadores', { search: searchTerm }, { preserveState: true, replace: true });
   };
 
-  const filteredWinners = ganadores.filter(w => {
-    
-    
-    
-    return true; 
-  });
-
   const { auth } = usePage().props;
+
+  // Filtramos por categoría y ubicación seleccionada dentro de un sorteo
+  const filterWinners = (winnersArray) => {
+    let filtered = winnersArray;
+    if (filterCategory !== 'Todos') {
+      filtered = filtered.filter(w => w.premio.toUpperCase().includes(filterCategory.toUpperCase()));
+    }
+    if (filterLocation !== 'Todos los lugares') {
+      filtered = filtered.filter(w => w.departamento === filterLocation);
+    }
+    return filtered;
+  };
+
+  // Filtramos los sorteos a mostrar según el Tab seleccionado
+  const sorteosToDisplay = activeSorteoTab === 'all' 
+    ? sorteos 
+    : sorteos.filter(s => s.id === activeSorteoTab);
+
+  // Computamos todos los ganadores a mostrar en pantalla aclamándolos en un solo array
+  const allCurrentWinners = sorteosToDisplay.flatMap(sorteo => filterWinners(sorteo.winners));
+  const totalFilteredWinners = allCurrentWinners.length;
 
   return (
     <PublicLayout isLoggedIn={!!auth?.user} currentUser={auth?.user}>
       <Head title="Nuestros Ganadores | Sorteos CampoAgro" />
       <section className="bg-[#F4F6F9] min-h-screen pb-20">
-        {/* HEADER DE SORTEOS (Tabs) */}
+        
+        {/* HEADER DE SORTEOS (Tabs Dinámicos por Sorteo) */}
         <div className="bg-white shadow-sm border-b border-gray-200 sticky top-[60px] md:top-[68px] z-40">
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="flex overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-6">
-              <button onClick={() => setWinnersTab('reciente')} className={`whitespace-nowrap py-4 font-bold text-sm border-b-4 transition-colors ${winnersTab === 'reciente' ? 'border-amber-400 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Último Sorteo</button>
-              <button onClick={() => setWinnersTab('historico')} className={`whitespace-nowrap py-4 font-bold text-sm border-b-4 transition-colors ${winnersTab === 'historico' ? 'border-amber-400 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Sorteos Anteriores</button>
+              <button 
+                onClick={() => setActiveSorteoTab('all')} 
+                className={`whitespace-nowrap py-4 font-bold text-sm border-b-4 transition-colors ${activeSorteoTab === 'all' ? 'border-amber-400 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              >
+                Todos los Sorteos
+              </button>
+              {sorteos.map(sorteo => (
+                <button 
+                  key={sorteo.id}
+                  onClick={() => setActiveSorteoTab(sorteo.id)} 
+                  className={`whitespace-nowrap py-4 font-bold text-sm border-b-4 transition-colors ${activeSorteoTab === sorteo.id ? 'border-amber-400 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                  {sorteo.nombre}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="container mx-auto px-4 max-w-6xl mt-8">
+        <div className="container mx-auto px-4 max-w-6xl mt-8 pt-4">
           <button onClick={() => window.history.back()} className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-bold mb-6 transition-colors">
             <ArrowLeft className="w-5 h-5" /> Volver atrás
           </button>
-
-          {/* HERO GANADORES */}
-          <div className="text-center mb-8">
-            <p className="text-emerald-600 font-black text-lg md:text-xl uppercase tracking-widest mb-1">Resultados Oficiales</p>
+          <div className="text-center mb-12">
             <h2 className="text-5xl md:text-7xl font-black text-[#0A2240] uppercase italic mb-4">
               ¡GANADORES!
             </h2>
@@ -58,7 +89,7 @@ export default function Ganadores({ ganadoresPaginated, filters = {} }) {
             </p>
 
             {/* Búsqueda por DNI */}
-            <form onSubmit={handleSearch} className="max-w-xl mx-auto flex gap-2">
+            <form onSubmit={handleSearch} className="max-w-xl mx-auto flex gap-2 mb-8">
                 <div className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                     <input 
@@ -80,27 +111,8 @@ export default function Ganadores({ ganadoresPaginated, filters = {} }) {
             </form>
           </div>
 
-          {/* RESUMEN DE PREMIOS */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white p-4 rounded-2xl shadow-sm text-center border border-slate-100">
-              <p className="text-4xl font-black text-slate-900 mb-1">20</p>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Carros</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm text-center border border-slate-100">
-              <p className="text-4xl font-black text-slate-900 mb-1">12</p>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Motos</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm text-center border border-slate-100">
-              <p className="text-4xl font-black text-slate-900 mb-1">5</p>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Smartphones</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm text-center border border-slate-100">
-              <p className="text-4xl font-black text-slate-900 mb-1">180</p>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Efectivo</p>
-            </div>
-          </div>
 
-          {/* FILTROS */}
+          {/* FILTROS (Originales) */}
           <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 mb-8 space-y-4">
             <div className="flex flex-wrap gap-2">
               {['Todos', 'CARRO', 'MOTO', 'SMARTPHONE', 'EFECTIVO'].map(cat => (
@@ -115,7 +127,7 @@ export default function Ganadores({ ganadoresPaginated, filters = {} }) {
             </div>
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-100">
               <p className="text-slate-500 font-bold text-sm w-full md:w-auto text-center md:text-left">
-                <span className="text-emerald-600">{filteredWinners.length}</span> resultados
+                <span className="text-emerald-600">{totalFilteredWinners}</span> resultados mostrados
               </p>
               <select
                 value={filterLocation || ''}
@@ -129,56 +141,62 @@ export default function Ganadores({ ganadoresPaginated, filters = {} }) {
             </div>
           </div>
 
-          {/* GRILLA DE GANADORES */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredWinners.map((winner) => (
-              <div key={winner.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 relative overflow-hidden flex flex-col hover:shadow-md hover:border-emerald-200 transition-all group">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-wider bg-emerald-100 text-emerald-800">
-                    Sorteo Finalizado
-                  </span>
-                  <span className="text-xs font-bold text-slate-400">N° {winner.ticket}</span>
-                </div>
+          {/* LISTA DE GANADORES (Grilla Única Constante) */}
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden mb-8">
+            <div className="p-6 md:p-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {allCurrentWinners.map((winner) => (
+                  <div key={winner.id} className="bg-slate-50 rounded-[1.5rem] p-6 relative flex flex-col hover:shadow-md hover:bg-white transition-all group border border-slate-100 hover:border-emerald-200">
+                    <div className="flex justify-between items-center mb-5">
+                      <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-md tracking-widest bg-emerald-100 text-emerald-800">
+                        Ticket # {winner.ticket}
+                      </span>
+                    </div>
 
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-12 h-12 shrink-0 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-xl font-black text-slate-400 group-hover:bg-amber-400 group-hover:text-slate-900 group-hover:border-amber-400 transition-colors">
-                    {winner.user.charAt(0)}
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="font-bold text-slate-800 text-sm truncate leading-tight">{winner.user}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{winner.sorteo}</p>
-                  </div>
-                </div>
+                    <div className="flex flex-col items-center text-center mb-6">
+                      <div className="w-16 h-16 rounded-full bg-white border-4 border-slate-100 shadow-sm flex items-center justify-center text-2xl font-black text-slate-400 group-hover:bg-amber-400 group-hover:text-slate-900 group-hover:border-amber-200 transition-colors mb-3">
+                        {winner.user.charAt(0)}
+                      </div>
+                      <p className="font-black text-slate-800 text-base leading-tight mb-1">{winner.user}</p>
+                      <p className="text-xs text-slate-500 mb-1">DNI: ••••{winner.dni.slice(-4)}</p>
+                      {winner.departamento && (
+                        <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mt-1">
+                          📍 {winner.departamento}
+                        </span>
+                      )}
+                    </div>
 
-                <div className="mt-auto bg-[#F4F6F9] border border-slate-100 p-3 rounded-xl text-center">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Premio Ganado</p>
-                  <p className="font-black text-slate-900 text-sm">{winner.premio}</p>
-                  <p className="text-[9px] text-slate-400 mt-1">DNI Oculto: ••••{winner.dni.slice(-4)} | Fecha: {winner.fecha}</p>
-                </div>
+                    <div className="mt-auto bg-white border border-slate-200 p-4 rounded-xl text-center shadow-sm">
+                      <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest mb-1">Premio Ganado</p>
+                      <p className="font-black text-[#0A2240] text-sm">{winner.premio}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
 
-          {filteredWinners.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-slate-100">
-              <p className="text-slate-500 font-bold">No se encontraron ganadores con estos filtros.</p>
+          {totalFilteredWinners === 0 && (
+            <div className="text-center py-20 bg-white rounded-[2rem] shadow-sm border border-slate-100 mt-8">
+              <Trophy className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-500 font-bold text-lg">No se encontraron ganadores con esos criterios.</p>
             </div>
           )}
 
-          {/* Paginación */}
+          {/* Paginación de Sorteos */}
           {paginationLinks.length > 3 && (
             <div className="mt-12 flex items-center justify-center">
               <div className="flex gap-2 flex-wrap justify-center">
                 {paginationLinks.map((link, idx) => (
                   <div key={idx}>
                     {link.url === null ? (
-                        <span className="px-4 py-2 border border-slate-200 text-slate-400 rounded-xl bg-slate-50 cursor-not-allowed text-sm font-bold block min-w-[40px] text-center" dangerouslySetInnerHTML={{ __html: link.label }} />
+                        <span className="px-5 py-2.5 border border-slate-200 text-slate-400 rounded-xl bg-white cursor-not-allowed text-sm font-bold block min-w-[44px] text-center" dangerouslySetInnerHTML={{ __html: link.label }} />
                     ) : (
                         <button
                           type="button"
                           onClick={() => router.get(link.url, { search: searchTerm }, { preserveState: true })}
-                          className={`px-4 py-2 border rounded-xl transition-all text-sm font-bold min-w-[40px] text-center shadow-sm ${
-                            link.active ? 'bg-amber-400 border-amber-400 text-slate-900 ring-2 ring-amber-200' : 'bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 border-slate-200'
+                          className={`px-5 py-2.5 border rounded-xl transition-all text-sm font-bold min-w-[44px] text-center shadow-sm ${
+                            link.active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 border-slate-200'
                           }`}
                           dangerouslySetInnerHTML={{ __html: link.label }}
                         />

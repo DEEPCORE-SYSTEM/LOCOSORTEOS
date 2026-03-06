@@ -14,6 +14,14 @@ class Ganador extends Model
         'user_id',
         'sorteo_id',
         'fecha_sorteo',
+        'tipo',
+        'imagen',
+        'destacado',
+    ];
+
+    protected $casts = [
+        'fecha_sorteo' => 'datetime',
+        'destacado' => 'boolean',
     ];
 
     public function sorteo()

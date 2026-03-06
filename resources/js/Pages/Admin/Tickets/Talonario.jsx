@@ -21,6 +21,7 @@ export default function Talonario({
   fetchTicketsPage,
   activeSorteo,
   setExportModalOpen,
+  isLoadingTickets,
 }) {
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [selectedOfflineTicket, setSelectedOfflineTicket] = useState('');
@@ -169,7 +170,13 @@ export default function Talonario({
           <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">Rango visible: {String(startTicket).padStart(4, '0')} - {String(endTicket).padStart(4, '0')}</span>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-2 relative min-h-[100px]">
+          {isLoadingTickets && (
+             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center rounded-lg">
+                <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-2" />
+                <span className="text-sm font-bold text-slate-500">Cargando tickets...</span>
+             </div>
+          )}
           {maxTickets > 0 && Array.from({ length: endTicket - startTicket + 1 }).map((_, i) => {
             const ticketIndex = startTicket + i;
             const num = String(ticketIndex).padStart(4, '0');

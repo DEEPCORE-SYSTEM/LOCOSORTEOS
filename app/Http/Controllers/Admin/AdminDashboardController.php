@@ -383,7 +383,7 @@ class AdminDashboardController extends Controller
             ];
         });
 
-        $sorteos = \App\Models\Sorteo::select('id', 'nombre', 'cantidad_tickets', 'precio_ticket')
+        $sorteos = \App\Models\Sorteo::select('id', 'nombre', 'cantidad_tickets', 'precio_ticket', 'estado', 'prefijo_ticket', 'digitos_ticket')
             ->whereIn('estado', ['activo', 'programado'])
             ->get();
 
@@ -394,7 +394,7 @@ class AdminDashboardController extends Controller
             'pendientesPaginated' => $pendientesPaginated,
             'sorteos'     => $sorteos,
             'ticketsData' => $ticketsData,
-            'filters'     => ['perPage' => $perPage]
+            'filters'     => ['search' => $search, 'perPage' => $perPage]
         ]);
     }
 
@@ -666,10 +666,12 @@ class AdminDashboardController extends Controller
         }
 
         return response()->json([
-            'number' => $ticket->numero,
-            'user' => $ticket->user ? $ticket->user->name : 'Usuario Anónimo',
-            'draw' => $ticket->sorteo->nombre ?? 'Sorteo',
-            'status' => $ticket->estado
+            'ticket_id' => $ticket->id,
+            'user_id'   => $ticket->user_id,
+            'number'    => $ticket->numero,
+            'user'      => $ticket->user ? $ticket->user->name : 'Usuario Anónimo',
+            'draw'      => $ticket->sorteo->nombre ?? 'Sorteo',
+            'status'    => $ticket->estado
         ]);
     }
 }

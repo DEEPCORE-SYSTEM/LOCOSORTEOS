@@ -77,7 +77,7 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
                                 .reduce((acc, curr) => acc + parseInt(curr.qty || 1), 0);
 
   const grandWinners = ganadores;
-  const { auth } = usePage().props;
+  const { auth, settings } = usePage().props;
 
   return (
     <PublicLayout isLoggedIn={!!auth?.user} currentUser={auth?.user}>
@@ -212,7 +212,7 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
                       </div>
                       <div className="flex justify-center gap-3 w-full">
                         <div className="bg-[#742284] text-white px-15 py-3.5 rounded-xl font-black shadow-sm flex flex-col items-center justify-center w-full">
-                          <span className="text-base font-bold tracking-widest mt-1.5">916 408 549</span>
+                          <span className="text-base font-bold tracking-widest mt- par1.5">916 408 549</span>
                         </div>
                        
                       </div>
@@ -384,7 +384,11 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
                   {grandWinners.map((winner) => (
                     <div key={`${winner.id}-${index}`} className="w-[160px] md:w-[240px] shrink-0 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group relative hover:border-emerald-200 transition-colors">
                       <div className="bg-slate-100 aspect-square flex items-center justify-center relative overflow-hidden">
-                        <ImageIcon className="w-12 h-12 text-slate-300" />
+                        {winner.imagen ? (
+                          <img src={winner.imagen} alt={`Premio Mayor - ${winner.name}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        ) : (
+                          <ImageIcon className="w-12 h-12 text-slate-300" />
+                        )}
                         <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors"></div>
                         <div className="absolute top-2 right-2 bg-amber-400 text-slate-900 text-xs font-black px-2 py-1 rounded-md shadow-sm">
                           {winner.date}
@@ -393,9 +397,14 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
                       <div className="p-4 text-center">
                         <p className="font-bold text-slate-800 text-sm mb-1">{winner.name}</p>
                         <p className="text-emerald-600 font-black text-sm mb-3">{winner.prize}</p>
-                        <button className="text-slate-500 text-xs font-bold uppercase hover:text-emerald-700 transition-colors flex items-center justify-center gap-1 mx-auto bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full">
+                        <a 
+                          href={winner.imagen || settings?.tiktok_url || settings?.link_redes || '/ganadores'} 
+                          target={winner.imagen || settings?.tiktok_url || settings?.link_redes ? '_blank' : '_self'}
+                          rel="noopener noreferrer"
+                          className="text-slate-500 text-xs font-bold uppercase hover:text-emerald-700 transition-colors flex items-center justify-center gap-1 mx-auto bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full inline-flex"
+                        >
                           Ver publicación <ChevronRight className="w-3 h-3" />
-                        </button>
+                        </a>
                       </div>
                     </div>
                   ))}

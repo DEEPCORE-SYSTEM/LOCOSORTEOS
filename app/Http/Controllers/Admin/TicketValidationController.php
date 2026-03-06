@@ -131,59 +131,84 @@ class TicketValidationController extends Controller
         }
 
         DB::transaction(function () use ($compra) {
-            $cantidad = $compra->detalles['cantidad'] ?? 1;
-            $modo = $compra->detalles['modo_seleccion'] ?? 'random';
+            $cantidad        = $compra->detalles['cantidad'] ?? 1;
+            $modo            = $compra->detalles['modo_seleccion'] ?? 'random';
             $numerosManuales = $compra->detalles['numeros_manuales'] ?? [];
+            $sorteo          = \App\Models\Sorteo::find($compra->sorteo_id);
 
-            $ticketsOcupados = Ticket::where('sorteo_id', $compra->sorteo_id)->pluck('numero')->toArray();
+            $numerosAsignados = [];
+            $ticketIds        = [];
 
-            $nuevosTickets = [];
-
-            if ($modo === 'manual' && count($numerosManuales) == $cantidad) {
+            if ($modo === 'manual' && count($numerosManuales) === (int)$cantidad) {
+                // Tickets con números específicos elegidos por el cliente
                 foreach ($numerosManuales as $num) {
-                    if (!in_array($num, $ticketsOcupados)) {
-                        $nuevosTickets[] = $num;
-                    } else {
-                        $nuevosTickets[] = $this->generarNumeroLibre($ticketsOcupados, $compra->sorteo_id);
-                        $ticketsOcupados[] = end($nuevosTickets);
+                    $numFormateado = $this->formatearNumeroTicket($num, $sorteo);
+
+                    // Buscar ticket existente disponible con ese número
+                    $ticket = Ticket::where('sorteo_id', $compra->sorteo_id)
+                        ->where('numero', $numFormateado)
+                        ->whereIn('estado', ['disponible', 'reservado'])
+                        ->first();
+
+                    if (!$ticket) {
+                        // Si no existe con ese número o ya está ocupado, buscar uno libre al azar
+                        $ticket = Ticket::where('sorteo_id', $compra->sorteo_id)
+                            ->where('estado', 'disponible')
+                            ->inRandomOrder()
+                            ->first();
+
+                        if (!$ticket) {
+                            abort(422, 'El sorteo está lleno. No quedan tickets disponibles.');
+                        }
                     }
+
+                    $ticket->update([
+                        'estado'      => 'vendido',
+                        'user_id'     => $compra->user_id,
+                        'fecha_venta' => now(),
+                    ]);
+
+                    $numerosAsignados[] = $ticket->numero;
+                    $ticketIds[]        = $ticket->id;
                 }
             } else {
-                for ($i = 0; $i < $cantidad; $i++) {
-                    $num = $this->generarNumeroLibre($ticketsOcupados, $compra->sorteo_id);
-                    $nuevosTickets[] = $num;
-                    $ticketsOcupados[] = $num;
+                // Tickets asignados al azar
+                for ($i = 0; $i < (int)$cantidad; $i++) {
+                    $ticket = Ticket::where('sorteo_id', $compra->sorteo_id)
+                        ->where('estado', 'disponible')
+                        ->inRandomOrder()
+                        ->first();
+
+                    if (!$ticket) {
+                        abort(422, 'El sorteo está lleno. No quedan tickets disponibles.');
+                    }
+
+                    $ticket->update([
+                        'estado'      => 'vendido',
+                        'user_id'     => $compra->user_id,
+                        'fecha_venta' => now(),
+                    ]);
+
+                    $numerosAsignados[] = $ticket->numero;
+                    $ticketIds[]        = $ticket->id;
                 }
             }
 
-            $sorteo = \App\Models\Sorteo::find($compra->sorteo_id);
-            $numerosAsignados = [];
-            $ticketIds = [];
-
-            foreach ($nuevosTickets as $numStr) {
-                $numeroFormateado = $this->formatearNumeroTicket($numStr, $sorteo);
-                $ticket = Ticket::create([
-                    'sorteo_id' => $compra->sorteo_id,
-                    'numero' => $numeroFormateado,
-                    'estado' => 'vendido',
-                    'user_id' => $compra->user_id,
-                    'fecha_venta' => now()
-                ]);
-                $numerosAsignados[] = $numeroFormateado;
-                $ticketIds[] = $ticket->id;
-            }
-
+            // Vincular tickets a la compra
             $compra->tickets()->attach($ticketIds);
-            $detalles = $compra->detalles ?? [];
+
+            // Guardar números asignados en detalles y marcar aprobado
+            $detalles                      = $compra->detalles ?? [];
             $detalles['numeros_asignados'] = $numerosAsignados;
             $compra->update([
-                'estado' => 'aprobado',
-                'detalles' => $detalles
+                'estado'   => 'aprobado',
+                'detalles' => $detalles,
             ]);
         });
 
-        return redirect()->back()->with('success', 'Pago aprobado y tickets generados exitosamente.');
+        return redirect()->back()->with('success', 'Pago aprobado y tickets asignados exitosamente.');
     }
+
 
     public function reject(Request $request, $id)
     {

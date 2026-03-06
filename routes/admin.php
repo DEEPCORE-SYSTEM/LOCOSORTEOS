@@ -38,6 +38,7 @@ Route::middleware(['role:admin'])->group(function () {
     Route::post('/tickets/{id}/approve', [\App\Http\Controllers\Admin\TicketValidationController::class, 'approve'])->name('admin.tickets.approve');
     Route::post('/tickets/{id}/reject',  [\App\Http\Controllers\Admin\TicketValidationController::class, 'reject'])->name('admin.tickets.reject');
     Route::post('/tickets/export-pdf',   [\App\Http\Controllers\Admin\TicketValidationController::class, 'exportPdf'])->name('admin.tickets.export_pdf');
+    Route::get('/api/talonario/tickets', [\App\Http\Controllers\Admin\TalonarioController::class, 'getTickets'])->name('admin.talonario.tickets');
     Route::put('/compras/{id}',          [\App\Http\Controllers\Admin\TicketValidationController::class, 'updateCompra'])->name('admin.compras.update');
     Route::delete('/compras/{id}',       [\App\Http\Controllers\Admin\TicketValidationController::class, 'destroyCompra'])->name('admin.compras.destroy');
 
@@ -52,6 +53,15 @@ Route::middleware(['role:admin'])->group(function () {
     Route::post('/difusion',       [\App\Http\Controllers\Admin\AdminDashboardController::class, 'storeMensaje'])->name('admin.difusion.store');
     Route::put('/difusion/{id}',   [\App\Http\Controllers\Admin\AdminDashboardController::class, 'updateMensaje'])->name('admin.difusion.update');
     Route::delete('/difusion/{id}',[\App\Http\Controllers\Admin\AdminDashboardController::class, 'deleteMensaje'])->name('admin.difusion.delete');
+
+    // ── Ganadores ──────────────────────────────────────────────────────────
+    Route::get('/ganadores',                           [\App\Http\Controllers\Admin\GanadoresController::class, 'index'])->name('admin.ganadores');
+    Route::post('/ganadores',                          [\App\Http\Controllers\Admin\GanadoresController::class, 'store'])->name('admin.ganadores.store');
+    Route::put('/ganadores/{id}',                      [\App\Http\Controllers\Admin\GanadoresController::class, 'update'])->name('admin.ganadores.update');
+    Route::delete('/ganadores/{id}',                   [\App\Http\Controllers\Admin\GanadoresController::class, 'destroy'])->name('admin.ganadores.destroy');
+    Route::post('/ganadores/upload-image',             [\App\Http\Controllers\Admin\GanadoresController::class, 'uploadImage'])->name('admin.ganadores.upload_image');
+    Route::get('/api/ganadores/cliente-tickets',       [\App\Http\Controllers\Admin\GanadoresController::class, 'apiClienteTickets'])->name('admin.ganadores.cliente_tickets');
+    Route::get('/api/ganadores/premios/{sorteoId}',    [\App\Http\Controllers\Admin\GanadoresController::class, 'apiPremiosBySorteo'])->name('admin.ganadores.premios');
 
     
     Route::get('/configuracion',  [\App\Http\Controllers\Admin\AdminDashboardController::class, 'getSettings'])->name('admin.settings.get');

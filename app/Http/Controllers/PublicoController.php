@@ -92,7 +92,12 @@ class PublicoController extends Controller
                 'user:id,name',
                 'premio:id,descripcion,nombre,orden',
             ])
-            ->whereHas('premio', fn($q) => $q->where('orden', 1))
+            ->where('destacado', true) // Solo ganadores marcados como destacados
+            ->orWhere(function($q) {
+                // O si no hay suficientes destacados, los de primer puesto (fallback antiguo)
+                $q->whereHas('premio', fn($p) => $p->where('orden', 1));
+            })
+            ->orderBy('destacado', 'desc') // Primero los marcados manualmente
             ->orderBy('created_at', 'desc')
             ->take(self::GANADORES_RECIENTES_LIMIT)
             ->get()
@@ -102,6 +107,7 @@ class PublicoController extends Controller
                 'prize'  => $g->premio?->descripcion ?? $g->premio?->nombre ?? 'Premio Mayor',
                 'date'   => $g->created_at->format('d/m/Y'),
                 'sorteo' => $g->sorteo?->nombre ?? '',
+                'imagen' => $g->imagen ? asset('storage/' . $g->imagen) : null,
             ]);
     }
 
@@ -133,6 +139,7 @@ class PublicoController extends Controller
             'id'     => $g->id,
             'user'   => $g->user?->name  ?? 'Anónimo',
             'dni'    => $g->user?->dni   ?? '—',
+            'departamento' => $g->user?->departamento ?? 'Desconocida',
             'ticket' => $g->ticket?->numero ?? '—',
             'sorteo' => $g->sorteo?->nombre ?? '—',
             'premio' => $g->premio?->nombre ?? '—',
@@ -183,7 +190,7 @@ class PublicoController extends Controller
     }
 
     /**
-     * Página pública de ganadores con búsqueda y paginación.
+     * Página pública de ganadores agrupada por Sorteo.
      */
     public function ganadores(Request $request)
     {
@@ -193,27 +200,47 @@ class PublicoController extends Controller
             abort(422, 'Búsqueda demasiado larga.');
         }
 
-        $query = Ganador::with([
-                'sorteo:id,nombre',
-                'ticket:id,numero',
-                'user:id,name,dni',
-                'premio:id,nombre',
-            ])
-            ->orderBy('created_at', 'desc');
+        $querySorteos = Sorteo::whereHas('ganadores')
+            ->orderBy('created_at', 'desc')
+            ->with(['ganadores' => function ($query) use ($search) {
+                // Eager load de las relaciones del ganador incl. el departamento del user
+                $query->with(['ticket:id,numero', 'user:id,name,dni,departamento', 'premio:id,nombre'])
+                      ->orderBy('created_at', 'asc');
+                      
+                // Filtro de búsqueda opcional sobre los ganadores
+                if ($search) {
+                    $query->where(function ($q) use ($search) {
+                        $q->whereHas('user',   fn($q2) => $q2->where('dni',    'like', "%{$search}%"))
+                          ->orWhereHas('ticket', fn($q2) => $q2->where('numero', 'like', "%{$search}%"));
+                    });
+                }
+            }]);
 
+        // Si hay búsqueda, solo traer sorteos que tengan ganadores que cumplan el criterio
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('user',   fn($q2) => $q2->where('dni',    'like', "%{$search}%"))
-                  ->orWhereHas('ticket', fn($q2) => $q2->where('numero', 'like', "%{$search}%"));
+            $querySorteos->whereHas('ganadores', function ($q) use ($search) {
+                $q->where(function ($q2) use ($search) {
+                    $q2->whereHas('user',   fn($q3) => $q3->where('dni',    'like', "%{$search}%"))
+                      ->orWhereHas('ticket', fn($q3) => $q3->where('numero', 'like', "%{$search}%"));
+                });
             });
         }
 
-        $ganadoresPaginated = $query->paginate(self::GANADORES_PER_PAGE)->withQueryString();
-        $ganadoresPaginated->getCollection()->transform(fn($g) => $this->mapGanadorPublico($g));
+        $sorteosPaginated = $querySorteos->paginate(self::GANADORES_PER_PAGE)->withQueryString();
+
+        // Mapear cada sorteo con su lista de ganadores
+        $sorteosPaginated->getCollection()->transform(function ($sorteo) {
+            return [
+                'id'      => $sorteo->id,
+                'nombre'  => $sorteo->nombre,
+                'fecha'   => $sorteo->created_at->format('d/m/Y'),
+                'winners' => $sorteo->ganadores->map(fn($g) => $this->mapGanadorPublico($g))->values()->all()
+            ];
+        });
 
         return Inertia::render('Publico/Ganadores', [
-            'ganadoresPaginated' => $ganadoresPaginated,
-            'filters'            => $request->only('search'),
+            'sorteosPaginated' => $sorteosPaginated,
+            'filters'          => $request->only('search'),
         ]);
     }
 

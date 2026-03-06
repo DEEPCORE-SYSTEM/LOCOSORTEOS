@@ -20,9 +20,23 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
   const [offlinePage, setOfflinePage] = useState(1);
   const ticketsPerPage = 120;
   
+  const [currentTicketsData, setCurrentTicketsData] = useState({});
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false);
+
+  useEffect(() => {
+     if (offlineSorteoId && activeTab === 'admin-talonario') {
+         setIsLoadingTickets(true);
+         axios.get('/admin/api/talonario/tickets', { params: { sorteo_id: offlineSorteoId } })
+              .then(res => {
+                  setCurrentTicketsData(res.data);
+              })
+              .catch(err => console.error("Error fetching tickets:", err))
+              .finally(() => setIsLoadingTickets(false));
+     }
+  }, [offlineSorteoId, activeTab]);
+
   const activeSorteo = sorteos.find(s => s.id === offlineSorteoId) || sorteos[0] || null;
   const maxTickets = activeSorteo ? activeSorteo.cantidad_tickets : 0;
-  const currentTicketsData = activeSorteo ? (ticketsData[activeSorteo.id] || {}) : {};
   
   const countVendidos = Object.values(currentTicketsData).filter(s => s === 'vendido').length;
   const countImpresos = Object.values(currentTicketsData).filter(s => s === 'impreso').length;
@@ -195,6 +209,7 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
               startTicket={startTicket}
               endTicket={endTicket}
               currentTicketsData={currentTicketsData}
+              isLoadingTickets={isLoadingTickets}
               countVendidos={countVendidos}
               countImpresos={countImpresos}
               countReservados={countReservados}
@@ -302,8 +317,39 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
 
                 <form id="exportForm" className="space-y-6" onSubmit={(e) => {
                   e.preventDefault();
-                  setExportModalOpen(false);
-                  alert("Generando PDF... Los números del rango seleccionado ahora figuran como 'Impresos' en el sistema.");
+                  if (!exportDesde || !exportHasta) {
+                      alert('Por favor ingrese el rango');
+                      return;
+                  }
+                  if (activeSorteo && confirm(`¿Generar reporte para los tickets ${exportDesde} al ${exportHasta}?`)) {
+                      const formData = new FormData(e.target);
+                      const format = formData.get('exportFormat');
+                      const vendedor = formData.get('vendedor') || '';
+
+                      axios.post('/admin/tickets/export-pdf', {
+                          sorteo_id: activeSorteo.id,
+                          desde: exportDesde,
+                          hasta: exportHasta,
+                          formato: format,
+                          vendedor: vendedor
+                      }).then(res => {
+                          if (res.data.status === 'success' || res.data.status === 'queued') {
+                             if (res.data.url) {
+                                  window.open(res.data.url, '_blank');
+                             } else {
+                                  alert(res.data.message);
+                             }
+                             setExportModalOpen(false);
+                             // Refresh ticket list
+                             setIsLoadingTickets(true);
+                             axios.get('/admin/api/talonario/tickets', { params: { sorteo_id: activeSorteo.id } })
+                               .then(resp => setCurrentTicketsData(resp.data))
+                               .finally(() => setIsLoadingTickets(false));
+                          }
+                      }).catch(err => {
+                          alert(err.response?.data?.message || 'Error al exportar');
+                      });
+                  }
                 }}>
                   {/* 1. Rango */}
                   <div>
@@ -359,7 +405,7 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
                   {/* 3. Vendedor */}
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">3. Asignar Lote a Vendedor (Opcional)</label>
-                    <input type="text" placeholder="Ej: Vendedor Centro - Juan"
+                    <input type="text" name="vendedor" placeholder="Ej: Vendedor Centro - Juan"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none text-sm" />
                   </div>
                 </form>

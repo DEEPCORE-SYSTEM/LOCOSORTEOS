@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { 
   LayoutDashboard, Trophy, PlayCircle, 
-  Ticket, Users, Megaphone, ArrowLeft, BellRing 
+  Ticket, Users, Megaphone, ArrowLeft, BellRing, Award
 } from 'lucide-react';
 
 export default function AdminLayout({ children, currentView = 'admin-dashboard' }) {
@@ -56,6 +56,9 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
           <Link href="/admin/usuarios" className={`flex items-center gap-3 shrink-0 md:w-full text-left px-4 py-3 rounded-xl font-bold transition-colors ${currentView === 'admin-users' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-emerald-800 hover:text-white'}`}>
             <Users className="w-5 h-5"/> <span className="inline">Usuarios Registrados</span>
           </Link>
+          <Link href="/admin/ganadores" className={`flex items-center gap-3 shrink-0 md:w-full text-left px-4 py-3 rounded-xl font-bold transition-colors text-amber-300 ${currentView === 'admin-ganadores' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-emerald-800 hover:text-amber-200'}`}>
+            <Award className="w-5 h-5"/> <span className="inline">Ganadores</span>
+          </Link>
           <Link href="/admin/difusion" className={`flex items-center gap-3 shrink-0 md:w-full text-left px-4 py-3 rounded-xl font-bold transition-colors ${currentView === 'admin-difusion' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-emerald-800 hover:text-white'}`}>
             <Megaphone className="w-5 h-5"/> <span className="inline">Difusión y Contenido</span>
           </Link>
@@ -80,6 +83,7 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
             {currentView === 'admin-lista-tickets' && 'Base de Datos de Tickets'}
             {currentView === 'admin-talonario' && 'Talonario y Ventas Offline'}
             {currentView === 'admin-users' && 'Gestión de Usuarios'}
+            {currentView === 'admin-ganadores' && '🏆 Gestión de Ganadores'}
             {currentView === 'admin-difusion' && 'Canal de Difusión'}
           </h2>
           <div className="flex items-center gap-4">

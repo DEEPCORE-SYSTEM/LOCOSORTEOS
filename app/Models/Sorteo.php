@@ -36,4 +36,9 @@ class Sorteo extends Model
     {
         return $this->hasMany(Compra::class);
     }
+
+    public function ganadores()
+    {
+        return $this->hasMany(Ganador::class);
+    }
 }

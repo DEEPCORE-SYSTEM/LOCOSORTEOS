@@ -23,8 +23,6 @@ export default function Checkout({
     dashboard: 'Mi Panel | Sorteos CampoAgro',
     profile:   'Mi Perfil | Sorteos CampoAgro',
     checkout:  'Checkout | Sorteos CampoAgro',
-    profile: 'Mi Perfil | Sorteos CampoAgro',
-    checkout: 'Checkout | Sorteos CampoAgro',
   };
 
   return (

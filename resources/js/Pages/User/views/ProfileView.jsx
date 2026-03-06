@@ -7,8 +7,8 @@ import { PERU_DEPARTAMENTOS } from '../constants/locations';
  */
 export default function ProfileView({ currentUser, onBack }) {
   const { data, setData, post, processing, errors } = useForm({
-    phone: currentUser?.phone || '',
-    dept:  currentUser?.dept  || '',
+    telefono: currentUser?.telefono || '',
+    departamento:  currentUser?.departamento  || '',
   });
 
   const handleSubmit = (e) => {
@@ -70,11 +70,11 @@ export default function ProfileView({ currentUser, onBack }) {
                   type="text"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-medium text-slate-700 transition-all outline-none"
                   placeholder="Ej: 999 999 999"
-                  value={data.phone}
-                  onChange={e => setData('phone', e.target.value.replace(/\D/g, ''))}
+                  value={data.telefono}
+                  onChange={e => setData('telefono', e.target.value.replace(/\D/g, ''))}
                 />
               </div>
-              {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+              {errors.telefono && <p className="text-red-500 text-sm mt-1">{errors.telefono}</p>}
             </div>
 
             {/* Departamento */}
@@ -86,8 +86,8 @@ export default function ProfileView({ currentUser, onBack }) {
                 </div>
                 <select
                   className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-medium text-slate-700 transition-all outline-none appearance-none"
-                  value={data.dept}
-                  onChange={e => setData('dept', e.target.value)}
+                  value={data.departamento}
+                  onChange={e => setData('departamento', e.target.value)}
                 >
                   <option value="">Selecciona tu departamento...</option>
                   {PERU_DEPARTAMENTOS.map(loc => (
@@ -95,7 +95,7 @@ export default function ProfileView({ currentUser, onBack }) {
                   ))}
                 </select>
               </div>
-              {errors.dept && <p className="text-red-500 text-sm mt-1">{errors.dept}</p>}
+              {errors.departamento && <p className="text-red-500 text-sm mt-1">{errors.departamento}</p>}
             </div>
 
             {/* Submit */}
