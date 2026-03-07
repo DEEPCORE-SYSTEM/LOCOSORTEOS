@@ -411,7 +411,7 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-        $query = \App\Models\Compra::with(['user', 'sorteo'])
+        $query = \App\Models\Compra::with(['user', 'sorteo', 'tickets:id,numero'])
             ->where('estado', '!=', 'pendiente')
             ->orderBy('created_at', 'desc');
 
@@ -432,6 +432,16 @@ class AdminDashboardController extends Controller
         $comprasPaginated = $query->paginate($limit, ['*'], 'page')->withQueryString();
             
         $comprasPaginated->getCollection()->transform(function ($c) {
+            $detalles = $c->detalles;
+            // Si no tiene la key 'tickets' pero tiene 'numeros_asignados', la usamos
+            if (!isset($detalles['tickets']) && isset($detalles['numeros_asignados'])) {
+                $detalles['tickets'] = $detalles['numeros_asignados'];
+            }
+            // Si sigue sin tener tickets en detalles, intentamos sacar de la relación
+            if (!isset($detalles['tickets']) || empty($detalles['tickets'])) {
+                $detalles['tickets'] = $c->tickets->pluck('numero')->toArray();
+            }
+
             return [
                 'id'             => $c->id,
                 'user'           => $c->user?->name ?? $c->nombre ?? '—',
@@ -442,7 +452,7 @@ class AdminDashboardController extends Controller
                 'metodo_pago'    => strtoupper($c->metodo_pago ?? '—'),
                 'estado'         => $c->estado,
                 'comprobante_url'=> $c->comprobante ? asset('storage/'.$c->comprobante) : null,
-                'detalles'       => $c->detalles,
+                'detalles'       => $detalles,
             ];
         });
 

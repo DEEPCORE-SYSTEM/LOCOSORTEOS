@@ -11,6 +11,10 @@ export default function ValidarPagos({ pendientesPaginated, searchQuery, setSear
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [ticketToReject, setTicketToReject] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  
+  // Modal para ver imagen
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState(null);
 
   const handleApproveTicket = (id) => {
     if (confirm('¿Estás seguro de aprobar este pago y generar los tickets correspondientes?')) {
@@ -105,9 +109,15 @@ export default function ValidarPagos({ pendientesPaginated, searchQuery, setSear
                   </td>
                   <td className="p-4">
                     {ticket.comprobante_url ? (
-                        <a href={ticket.comprobante_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-lg text-xs w-max">
+                        <button 
+                          onClick={() => {
+                            setSelectedImageUrl(ticket.comprobante_url);
+                            setImageModalOpen(true);
+                          }} 
+                          className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-lg text-xs w-max"
+                        >
                           <Eye className="w-4 h-4" /> Ver Imagen
-                        </a>
+                        </button>
                     ) : <span className="text-xs text-slate-400 dark:text-slate-500 font-bold bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg">Sin Imagen</span>}
                   </td>
                   <td className="p-4 text-center">
@@ -206,6 +216,27 @@ export default function ValidarPagos({ pendientesPaginated, searchQuery, setSear
               <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/50">
                 <button onClick={() => setRejectModalOpen(false)} className="px-5 py-2 font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg transition-colors">Cancelar</button>
                 <button onClick={confirmRejectTicket} className="px-5 py-2 font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm">Confirmar Rechazo</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL PARA VER IMAGEN DE COMPROBANTE */}
+        {imageModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-4" onClick={() => setImageModalOpen(false)}>
+            <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
+              <button 
+                onClick={() => setImageModalOpen(false)} 
+                className="absolute -top-12 right-0 p-2 text-white hover:text-slate-300 transition-colors"
+              >
+                <XCircle className="w-8 h-8" />
+              </button>
+              <div className="bg-white p-2 rounded-2xl shadow-2xl overflow-hidden">
+                <img 
+                  src={selectedImageUrl} 
+                  alt="Comprobante de pago" 
+                  className="max-w-full max-h-[80vh] object-contain rounded-xl"
+                />
               </div>
             </div>
           </div>

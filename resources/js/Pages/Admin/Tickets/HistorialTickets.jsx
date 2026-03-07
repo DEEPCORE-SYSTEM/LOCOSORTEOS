@@ -1,6 +1,6 @@
 import React from 'react';
 import { router } from '@inertiajs/react';
-import { Search, Upload, Edit, Trash2 } from 'lucide-react';
+import { Search, Upload, Edit, Trash2, Eye, X } from 'lucide-react';
 
 export default function HistorialTickets({ 
     comprasPaginated, 
@@ -11,6 +11,13 @@ export default function HistorialTickets({
     onEditCompra,
     onDeleteCompra
 }) {
+  const [viewModalOpen, setViewModalOpen] = React.useState(false);
+  const [selectedTicket, setSelectedTicket] = React.useState(null);
+
+  const handleOpenView = (ticket) => {
+    setSelectedTicket(ticket);
+    setViewModalOpen(true);
+  };
   const filteredHistory = comprasPaginated?.data || [];
   const paginationLinks = comprasPaginated?.links || [];
 
@@ -88,6 +95,13 @@ export default function HistorialTickets({
                   <td className="p-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button 
+                        onClick={() => handleOpenView(ticket)} 
+                        className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                        title="Ver Detalles"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button 
                         onClick={() => onEditCompra(ticket)} 
                         className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
                         title="Editar Compra"
@@ -153,6 +167,110 @@ export default function HistorialTickets({
           </div>
         )}
       </div>
+
+      {/* MODAL DE VISTA DETALLADA */}
+      {viewModalOpen && selectedTicket && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-transparent dark:border-slate-700">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg">
+                  <Eye className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <h3 className="font-black text-lg text-slate-900 dark:text-white">Detalle de COMPRA-{selectedTicket.id}</h3>
+              </div>
+              <button onClick={() => setViewModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* Info Cliente */}
+              <div>
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Información del Cliente</h4>
+                <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-700/30 p-4 rounded-xl border border-slate-100 dark:border-slate-600">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Nombre</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">{selectedTicket.user}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">DNI</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">{selectedTicket.user_dni}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Sorteo</p>
+                    <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{selectedTicket.sorteo}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Pago */}
+              <div>
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Detalle del Pago</h4>
+                <div className="grid grid-cols-2 gap-4 border border-slate-100 dark:border-slate-700 p-4 rounded-xl">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Monto Total</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">S/ {parseFloat(selectedTicket.total || 0).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Método</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">{selectedTicket.metodo_pago}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Fecha</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{selectedTicket.fecha}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Estado</p>
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-1 ${selectedTicket.estado === 'aprobado' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      {selectedTicket.estado}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tickets */}
+              <div>
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex justify-between items-center">
+                  <span>Tickets Asignados</span>
+                  <span className="bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-[10px]">{selectedTicket.detalles?.tickets?.length || 0} unid.</span>
+                </h4>
+                <div className="flex flex-wrap gap-2 p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
+                  {selectedTicket.detalles?.tickets ? selectedTicket.detalles.tickets.map(t => (
+                    <span key={t} className="bg-white dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400 text-xs font-black px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 shadow-sm">{t}</span>
+                  )) : <p className="text-slate-400 text-sm font-bold italic">No hay tickets registrados en el JSON de detalles.</p>}
+                </div>
+              </div>
+
+              {/* Comprobante if exists */}
+              {selectedTicket.comprobante_url && (
+                <div>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Comprobante de Pago</h4>
+                  <a href={selectedTicket.comprobante_url} target="_blank" rel="noreferrer" className="block group relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:border-emerald-500 transition-colors">
+                    <img src={selectedTicket.comprobante_url} alt="Comprobante" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Eye className="text-white w-8 h-8" />
+                    </div>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
+              <button 
+                onClick={() => {
+                   setViewModalOpen(false);
+                   onEditCompra(selectedTicket);
+                }} 
+                className="px-5 py-2 font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" /> Editar
+              </button>
+              <button onClick={() => setViewModalOpen(false)} className="px-5 py-2 font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg transition-colors">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

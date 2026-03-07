@@ -52,13 +52,12 @@ class TicketValidationController extends Controller
             ];
         });
 
-        $query = Compra::with(['user', 'sorteo'])
+        $query = Compra::with(['user', 'sorteo', 'tickets:id,numero'])
             ->where('estado', '!=', 'pendiente')
             ->orderBy('created_at', 'desc');
 
         if ($search) {
             $query->where(function($q) use ($search) {
-                
                 $cleanSearch = str_ireplace('COMPRA-', '', $search);
 
                 $q->whereHas('user', function($q2) use ($search) {
@@ -73,6 +72,14 @@ class TicketValidationController extends Controller
         $comprasPaginated = $query->paginate($limit, ['*'], 'hist_page')->withQueryString();
             
         $comprasPaginated->getCollection()->transform(function ($compra) {
+            $detalles = $compra->detalles;
+            if (!isset($detalles['tickets']) && isset($detalles['numeros_asignados'])) {
+                $detalles['tickets'] = $detalles['numeros_asignados'];
+            }
+            if (!isset($detalles['tickets']) || empty($detalles['tickets'])) {
+                $detalles['tickets'] = $compra->tickets->pluck('numero')->toArray();
+            }
+
             return [
                 'id' => $compra->id,
                 'user' => $compra->user?->name ?? $compra->nombre ?? '—',
@@ -83,7 +90,7 @@ class TicketValidationController extends Controller
                 'estado' => $compra->estado,
                 'fecha' => $compra->created_at->format('Y-m-d H:i'),
                 'comprobante_url' => $compra->comprobante ? asset('storage/' . $compra->comprobante) : null,
-                'detalles' => $compra->detalles
+                'detalles' => $detalles
             ];
         });
 
@@ -174,8 +181,8 @@ class TicketValidationController extends Controller
             $compra->tickets()->attach($ticketIds);
 
             // Guardar números asignados en detalles y marcar aprobado
-            $detalles                      = $compra->detalles ?? [];
-            $detalles['numeros_asignados'] = $numerosAsignados;
+            $detalles            = $compra->detalles ?? [];
+            $detalles['tickets'] = $numerosAsignados; // Cambiado de numeros_asignados a tickets para el frontend
             $compra->update([
                 'estado'   => 'aprobado',
                 'detalles' => $detalles,
@@ -262,8 +269,12 @@ class TicketValidationController extends Controller
                     'provincia_distrito' => $request->provincia_distrito,
                     'direccion' => $request->direccion,
                     'quien_realizo' => $request->quien_realizo,
+                    'tickets' => [], // Inicializar para llenar abajo
                 ]
             ]);
+
+            $numerosAsignados = [];
+            $ticketIds        = [];
 
             // Only track genuinely occupied tickets to prevent memory explosion with pre-seeded 'disponible' rows
             $ticketsOcupados = Ticket::where('sorteo_id', $compra->sorteo_id)
@@ -283,7 +294,7 @@ class TicketValidationController extends Controller
                         }
                     }
 
-                    Ticket::updateOrCreate(
+                    $ticket = Ticket::updateOrCreate(
                         [
                             'sorteo_id' => $compra->sorteo_id,
                             'numero' => $numFormatado
@@ -294,20 +305,33 @@ class TicketValidationController extends Controller
                             'fecha_venta' => now()
                         ]
                     );
+
+                    $numerosAsignados[] = $ticket->numero;
+                    $ticketIds[]        = $ticket->id;
                 }
             } else {
                 for ($i = 0; $i < $request->cantidad; $i++) {
                     $numStr = $this->generarNumeroLibre($ticketsOcupados, $compra->sorteo_id);
-                    Ticket::create([
+                    $ticket = Ticket::create([
                         'sorteo_id' => $compra->sorteo_id,
                         'numero' => $numStr, // ya formateado por generarNumeroLibre
                         'estado' => 'vendido',
                         'user_id' => $compra->user_id,
                         'fecha_venta' => now()
                     ]);
-                    $ticketsOcupados[] = $numStr;
+
+                    $numerosAsignados[] = $ticket->numero;
+                    $ticketIds[]        = $ticket->id;
+                    $ticketsOcupados[]  = $numStr;
                 }
             }
+
+            // Vincular tickets a la compra y actualizar detalles
+            $compra->tickets()->attach($ticketIds);
+            
+            $detalles = $compra->detalles;
+            $detalles['tickets'] = $numerosAsignados;
+            $compra->update(['detalles' => $detalles]);
         });
 
         return redirect()->back()->with('success', 'Venta offline registrada y tickets generados exitosamente.');
