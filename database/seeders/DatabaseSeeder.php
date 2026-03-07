@@ -15,29 +15,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        
-
-        User::create([
-            'name' => 'Usuario Cliente',
-            'dni' => '72345678',
-            'email' => 'cliente@CampoAgro.com',
-            'password' => bcrypt('password'),
-            'telefono' => '987654321',
-            'is_admin' => false,
-        ]);
-
-        User::create([
-            'name' => 'Admin CampoAgro Maestro',
-            'dni' => '11111111',
-            'email' => 'admin@CampoAgro.com',
-            'password' => bcrypt('password'),
-            'telefono' => '999999999',
-            'is_admin' => true,
-        ]);
-
+        // 1. Ejecutar roles primero
         $this->call([
             RoleSeeder::class,
-            SorteosSeeder::class,
         ]);
+
+        // 2. Crear un único super administrador para producción
+        $admin = User::firstOrCreate(
+            ['email' => 'sorteos@campoagro.com'],
+            [
+                'name' => 'Administrador Principal',
+                'dni' => '11111111',
+                'password' => bcrypt('password'),
+                'telefono' => '999999999',
+                'is_admin' => true,
+            ]
+        );
+
+        $admin->assignRole('admin');
     }
 }

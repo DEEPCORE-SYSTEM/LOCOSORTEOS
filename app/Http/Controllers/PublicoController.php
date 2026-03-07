@@ -127,6 +127,10 @@ class PublicoController extends Controller
                 default     => 'Pendiente',
             },
             'draw'      => $c->sorteo?->nombre ?? '—',
+            'user'      => $c->user?->name ?? $c->nombre ?? '—',
+            'user_dni'  => $c->user?->dni ?? $c->dni ?? '—',
+            'user_phone'=> $c->user?->telefono ?? $c->telefono ?? '—',
+            'user_dept' => $c->user?->departamento ?? '—',
         ]);
     }
 
@@ -267,7 +271,7 @@ class PublicoController extends Controller
         $tickets = $sorteo ? $this->getTicketsDisponibles($sorteo->id, $search) : [];
 
         $transactions = $this->mapTransacciones(
-            Compra::with('sorteo:id,nombre')
+            Compra::with(['sorteo:id,nombre', 'user:id,name,dni,telefono,departamento'])
                 ->where('user_id', $request->user()->id)
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -328,7 +332,7 @@ class PublicoController extends Controller
      */
     public function verTickets(Request $request, int $id)
     {
-        $compra = Compra::with(['sorteo:id,nombre,prefijo_ticket', 'tickets:id,sorteo_id,numero,estado'])
+        $compra = Compra::with(['sorteo:id,nombre,prefijo_ticket', 'tickets:id,sorteo_id,numero,estado', 'user:id,name,dni,telefono,departamento'])
             ->where('user_id', $request->user()->id)
             ->where('id', $id)
             ->firstOrFail();
@@ -382,6 +386,10 @@ class PublicoController extends Controller
                 'total'        => (float) $compra->total,
                 'fecha'        => $compra->created_at->format('d/m/Y H:i'),
                 'transaccion'  => $this->formatTransactionId($compra->id),
+                'user'         => $compra->user?->name ?? $compra->nombre ?? 'Anónimo',
+                'user_dni'     => $compra->user?->dni ?? $compra->dni ?? '—',
+                'user_phone'   => $compra->user?->telefono ?? $compra->telefono ?? '—',
+                'user_dept'    => $compra->user?->departamento ?? '—',
             ],
             'sorteo'  => $compra->sorteo ? [
                 'id'     => $compra->sorteo->id,

@@ -92,9 +92,13 @@ export default function VerTickets({ compra, sorteo, tickets = [], auth }) {
                 <h1 className="text-2xl md:text-3xl font-black mb-1 tracking-tight">
                   Transacción {compra?.transaccion}
                 </h1>
-                <p className="text-emerald-200/80 font-medium text-sm mb-6 md:mb-8">
+                <p className="text-emerald-200/80 font-medium text-sm mb-2">
                   {sorteo?.nombre ?? 'Sorteo'} · {compra?.fecha}
                 </p>
+                <div className="text-emerald-100/90 text-xs mb-6 md:mb-8 flex flex-col items-center gap-1">
+                  <p><span className="font-bold">Cliente:</span> {compra?.user} - DNI {compra?.user_dni}</p>
+                  <p><span className="font-bold">Contacto:</span> {compra?.user_phone} · {compra?.user_dept}</p>
+                </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 w-full">
                   <div className="bg-black/20 rounded-xl px-5 py-2.5 border border-white/10 backdrop-blur-sm">
                     <p className="text-[10px] text-emerald-300/80 font-bold uppercase tracking-widest mb-0.5">Total Pagado</p>

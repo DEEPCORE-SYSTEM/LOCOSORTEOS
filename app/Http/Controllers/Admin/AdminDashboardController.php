@@ -163,14 +163,6 @@ class AdminDashboardController extends Controller
                 ->orderByDesc('total')
                 ->take(3)
                 ->get();
-            
-            $deptFallback = [];
-            if ($topDeptos->isEmpty()) {
-                $deptFallback = [
-                    ['departamento' => 'Lima', 'total' => 280],
-                    ['departamento' => 'Junin', 'total' => 120]
-                ];
-            }
 
             return [
                 'stats' => [
@@ -189,7 +181,7 @@ class AdminDashboardController extends Controller
                 'rendimientoSorteos' => $rendimientoSorteos,
                 'transacciones' => $transacciones,
                 'origenPagos' => $origenPagos,
-                'topDepartamentos' => $topDeptos->isEmpty() ? $deptFallback : $topDeptos
+                'topDepartamentos' => $topDeptos
             ];
         });
 

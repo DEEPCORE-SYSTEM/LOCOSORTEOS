@@ -341,30 +341,36 @@ export default function Dashboard({
       {/* ── FILA 5: Top Departamentos ── */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 transition-colors duration-300">
         <h3 className="font-black text-slate-800 dark:text-white text-lg mb-5">🗺️ Top Departamentos por Ventas</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-          {topDepartamentos.map((depto, idx) => {
-            const max = Math.max(...topDepartamentos.map(d => d.total), 1);
-            const pct = Math.round((depto.total / max) * 100);
-            const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500'];
-            const color = colors[idx % colors.length];
-            return (
-              <div key={idx} className="flex items-center gap-4">
-                <span className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black text-xs shrink-0">
-                  #{idx + 1}
-                </span>
-                <div className="flex-1">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">{depto.departamento}</span>
-                    <span className="font-black text-emerald-600 dark:text-emerald-400">{depto.total} tickets</span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5">
-                    <div className={`${color} h-2.5 rounded-full`} style={{ width: `${pct}%` }} />
+        {topDepartamentos.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">
+            Aún no hay datos
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+            {topDepartamentos.map((depto, idx) => {
+              const max = Math.max(...topDepartamentos.map(d => d.total), 1);
+              const pct = Math.round((depto.total / max) * 100);
+              const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500'];
+              const color = colors[idx % colors.length];
+              return (
+                <div key={idx} className="flex items-center gap-4">
+                  <span className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black text-xs shrink-0">
+                    #{idx + 1}
+                  </span>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{depto.departamento}</span>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400">{depto.total} tickets</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5">
+                      <div className={`${color} h-2.5 rounded-full`} style={{ width: `${pct}%` }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </AdminLayout>
