@@ -473,12 +473,11 @@ class TicketValidationController extends Controller
         // The blade view expects $chunks of 10 tickets per page
         $numChunks = array_chunk($numerosRequeridos, 10);
 
-        $pdf = \Spatie\LaravelPdf\Facades\Pdf::view('pdf.tickets', [
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.tickets', [
                 'sorteo' => $sorteo,
                 'chunks' => $numChunks,
                 'vendedor' => $request->vendedor
-            ])
-            ->format('A4');
+            ])->setPaper('a4', 'portrait');
 
         
         $pdf->save(storage_path("app/public/{$pdfRelativePath}"));

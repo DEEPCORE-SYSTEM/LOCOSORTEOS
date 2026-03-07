@@ -62,8 +62,15 @@ export default function Talonario({
     setIsConsultandoDni(true);
     try {
         const response = await axios.post('/api/consultar-dni', { dni });
-        if (response.data.success && response.data.data) {
-            setData(d => ({ ...d, nombre: response.data.data.nombre_completo }));
+        if (response.data.success && response.data.nombre) {
+            setData(d => ({
+                ...d, 
+                nombre: response.data.nombre,
+                telefono: response.data.telefono || d.telefono,
+                departamento: response.data.departamento || d.departamento,
+                provincia_distrito: response.data.provincia_distrito || d.provincia_distrito,
+                direccion: response.data.direccion || d.direccion
+            }));
         }
     } catch (error) {
         console.error('Error al consultar DNI:', error);

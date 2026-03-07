@@ -3,31 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <title>Talonario de Tickets</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @page {
             margin: 0;
             size: A4;
         }
         body {
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            font-family: Arial, sans-serif;
             background-color: white;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
         .page-break {
             page-break-after: always;
         }
-        .ticket-container {
+        .container {
             width: 100%;
+            padding: 20px 30px;
+        }
+        /* Grid system for DOMPDF (using inline-block) */
+        .ticket-wrapper {
+            width: 48%;
+            display: inline-block;
+            margin-bottom: 20px;
+            vertical-align: top;
+        }
+        .ticket-wrapper:nth-child(odd) {
+            margin-right: 2%;
+        }
+        
+        .ticket {
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            height: 195px;
+            width: 100%;
+            display: block;
+            position: relative;
+        }
+        
+        .stub {
+            float: left;
+            width: 30%;
             height: 100%;
-            padding: 10mm;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-auto-rows: min-content;
-            gap: 5mm;
-            align-content: start;
+            border-right: 2px dashed #cbd5e1;
+            background-color: #f8fafc;
+            box-sizing: border-box;
+            padding: 10px;
+            position: relative;
+        }
+        
+        .main {
+            float: right;
+            width: 67%;
+            height: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            position: relative;
+        }
+        
+        p { margin: 0; padding: 0; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: bold; }
+        .font-black { font-weight: 900; }
+        .uppercase { text-transform: uppercase; }
+        
+        .talon-title { font-size: 9px; color: #94a3b8; }
+        .talon-number { font-size: 15px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 5px; margin-top: 5px; }
+        .talon-field { font-size: 9px; color: #94a3b8; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin-top: 6px; }
+        .talon-signature { font-size: 9px; color: #94a3b8; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 4px; }
+        
+        .brand-box { background: #fbbf24; padding: 2px 5px; border-radius: 4px; display: inline-block; vertical-align: middle; }
+        .brand-text { font-size: 11px; font-style: italic; color: #0f172a; display: inline-block; vertical-align: middle; margin-left: 5px; line-height: 1; }
+        .brand-accent { color: #059669; }
+        .price-tag { float: right; background: #dc2626; color: white; font-size: 11px; padding: 3px 8px; border-radius: 4px; }
+        
+        .middle-section { margin-top: 20px; text-align: center; }
+        .sorteo-name { font-size: 14px; color: #0f172a; overflow: hidden; height: 18px; line-height: 18px; }
+        .sorteo-prizes { font-size: 10px; color: #047857; margin-top: 5px; }
+        .ticket-number { font-size: 28px; font-family: monospace; color: #1e293b; letter-spacing: 2px; margin-top: 15px; border-top: 1px dotted #cbd5e1; border-bottom: 1px dotted #cbd5e1; padding: 8px 0; }
+        
+        .footer-section { position: absolute; bottom: 12px; width: 100%; right: 10px;}
+        .footer-text { float: left; width: 65%; margin-top: 10px;}
+        .transmission-text { font-size: 9px; color: #64748b; }
+        .handle-text { font-size: 10px; color: #2563eb; }
+        .qr-code { float: right; width: 50px; height: 50px;}
+        
+        .scissors {
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            font-size: 12px;
+            color: #cbd5e1;
+            background: white;
+            line-height: 1;
+        }
+
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
         }
     </style>
 </head>
@@ -35,71 +109,65 @@
 
 @php
     $linkRedes = \App\Models\SiteSettings::get('link_redes', 'https://facebook.com/SorteosCampoAgroOficial');
-    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=' . urlencode($linkRedes);
-    
+    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($linkRedes);
     $handle = parse_url($linkRedes, PHP_URL_PATH);
     $handle = ltrim($handle ?? $linkRedes, '/');
 @endphp
 
 @foreach ($chunks as $pageIndex => $pageNumeros)
-    <div class="ticket-container {{ !$loop->last ? 'page-break' : '' }}">
+    <div class="container {{ !$loop->last ? 'page-break' : '' }}">
         @foreach ($pageNumeros as $num)
-            <!-- TICKET EN GRID -->
-            <div class="bg-white border-2 border-slate-300 rounded-lg shadow-sm flex flex-row overflow-hidden relative" style="height: 52mm;">
-                <!-- Talón (Stub) -->
-                <div class="w-1/3 border-r-2 border-dashed border-slate-300 p-2 flex flex-col justify-between relative bg-slate-50">
-                    <div>
-                        <p class="text-[8px] font-bold text-slate-400 uppercase text-center mb-1">Talón Vendedor</p>
-                        <p class="text-xs font-black text-slate-900 text-center mb-1 border-b border-slate-200 pb-1">Nº {{ $num }}</p>
-                        <div class="space-y-1 mt-1">
-                            <div class="border-b border-slate-300 pb-0.5"><p class="text-[7px] text-slate-400">Nombre:</p></div>
-                            <div class="border-b border-slate-300 pb-0.5"><p class="text-[7px] text-slate-400">DNI:</p></div>
-                            <div class="border-b border-slate-300 pb-0.5"><p class="text-[7px] text-slate-400">Celular:</p></div>
+            <div class="ticket-wrapper">
+                <div class="ticket">
+                    <!-- Talón (Stub) -->
+                    <div class="stub">
+                        <p class="text-center font-bold uppercase talon-title">Talón Vendedor</p>
+                        <p class="text-center font-black talon-number">Nº {{ $num }}</p>
+                        
+                        <div style="margin-top:10px;">
+                            <p class="talon-field">Nombre:</p>
+                            <p class="talon-field">DNI:</p>
+                            <p class="talon-field">Celular:</p>
                         </div>
-                    </div>
-                    <div class="mt-2">
-                        <p class="text-[6px] text-slate-400 text-center">Firma/Sello</p>
-                        @if($vendedor)
-                            <p class="text-[5px] text-slate-300 text-center mt-1 w-full truncate border-t border-slate-200 pt-0.5">{{ $vendedor }}</p>
-                        @endif
-                    </div>
-                    <!-- Tijera -->
-                    <div class="text-slate-300 absolute -right-2 top-1/2 -translate-y-1/2 bg-white" style="font-size: 10px;">✂</div>
-                </div>
-
-                <!-- Main Ticket -->
-                <div class="w-2/3 p-3 flex flex-col relative overflow-hidden">
-                    <!-- Watermark -->
-                    <div class="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                        <svg class="w-24 h-24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-1.25 6-7.5 6-10.5M10.5 4.5c.5-1.5 2.5-1.5 3 0 .25 1 2 2.5 3.5 2.5s3.5-1 3.5-3.5S18.5.5 17 2M5 14.5c-.5-1.5-2.5-1.5-3 0-.25 1-2 2.5-3.5 2.5S-5 16-5 13.5 -3 10.5-1.5 12"/></svg>
+                        
+                        <div style="position: absolute; bottom: 12px; width: 85%;">
+                            <p class="text-center talon-signature">Firma/Sello</p>
+                            @if($vendedor)
+                                <p class="text-center font-bold" style="font-size: 8px; color: #64748b; margin-top:3px; overflow:hidden;">{{ substr($vendedor, 0, 18) }}</p>
+                            @endif
+                        </div>
+                        
+                        <div class="scissors">✂</div>
                     </div>
 
-                    <div class="flex justify-between items-start mb-1 relative z-10">
-                        <div class="flex items-center gap-1">
-                            <div class="bg-amber-400 p-0.5 rounded">
-                                <svg class="w-3 h-3 text-emerald-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 20h10"/><path d="M10 20c5.5-1.25 6-7.5 6-10.5M10.5 4.5c.5-1.5 2.5-1.5 3 0 .25 1 2 2.5 3.5 2.5s3.5-1 3.5-3.5S18.5.5 17 2"/></svg>
+                    <!-- Main Ticket -->
+                    <div class="main">
+                        <div class="clearfix">
+                            <div style="float: left;">
+                                <div class="brand-box">
+                                    <span style="font-weight:900; color:#064e3b; font-size: 10px;">CA</span>
+                                </div>
+                                <div class="brand-text font-black uppercase">
+                                    Sorteos<br/><span class="brand-accent">CampoAgro</span>
+                                </div>
                             </div>
-                            <span class="text-[9px] font-black italic uppercase text-slate-900 leading-none">Sorteos<br/><span class="text-emerald-600">CampoAgro</span></span>
+                            <div class="price-tag font-black">
+                                S/ {{ number_format($sorteo->precio_ticket, 2) }}
+                            </div>
                         </div>
-                        <div class="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">
-                            S/ {{ number_format($sorteo->precio_ticket, 2) }}
-                        </div>
-                    </div>
 
-                    <div class="text-center my-auto relative z-10">
-                        <h4 class="text-xs font-black text-slate-900 uppercase leading-tight truncate px-1">{{ $sorteo->nombre }}</h4>
-                        <p class="text-[8px] text-emerald-700 font-bold mt-0.5">{{ $sorteo->premios->count() }} Premios</p>
-                        <p class="text-xl font-black font-mono text-slate-800 tracking-widest mt-1 border-y border-slate-100 py-0.5">Nº {{ $num }}</p>
-                    </div>
-
-                    <div class="flex items-end justify-between mt-1 relative z-10">
-                        <div>
-                            <p class="text-[6px] text-slate-500 font-bold mb-0.5">Transmisión en vivo por:</p>
-                            <p class="text-[7px] font-black text-blue-600 truncate max-w-[90px]">{{ $handle }}</p>
+                        <div class="middle-section">
+                            <p class="sorteo-name font-black uppercase">{{ substr($sorteo->nombre, 0, 35) }}</p>
+                            <p class="sorteo-prizes font-bold">{{ $sorteo->premios->count() }} Premios</p>
+                            <p class="ticket-number font-black">Nº {{ $num }}</p>
                         </div>
-                        <!-- Real QR Code -->
-                        <div class="bg-white p-0.5 border border-slate-200 rounded">
-                            <img src="{{ $qrUrl }}" alt="QR" class="w-10 h-10" style="width:40px;height:40px;" />
+
+                        <div class="footer-section clearfix">
+                            <div class="footer-text">
+                                <p class="transmission-text font-bold">Transmisión en vivo por:</p>
+                                <p class="handle-text font-black">{{ substr($handle, 0, 20) }}</p>
+                            </div>
+                            <img src="{{ $qrUrl }}" class="qr-code" alt="QR Code">
                         </div>
                     </div>
                 </div>
@@ -110,4 +178,3 @@
 
 </body>
 </html>
-

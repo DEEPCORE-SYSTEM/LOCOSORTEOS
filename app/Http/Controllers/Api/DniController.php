@@ -18,6 +18,25 @@ class DniController extends Controller
         ]);
 
         $dni   = $request->input('dni');
+
+        // 1. Verificar primero en la base de datos local
+        $userLocal = \App\Models\User::where('dni', $dni)->first();
+        if ($userLocal) {
+            $ultimaCompra = \App\Models\Compra::where('user_id', $userLocal->id)->latest()->first();
+            $provinciaDistrito = $ultimaCompra->detalles['provincia_distrito'] ?? '';
+
+            return response()->json([
+                'success' => true,
+                'nombre'  => $userLocal->name,
+                'telefono' => $userLocal->telefono !== '000000000' && $userLocal->telefono !== '-' ? $userLocal->telefono : '',
+                'departamento' => $userLocal->departamento ?? '',
+                'direccion' => $userLocal->direccion ?? '',
+                'provincia_distrito' => $provinciaDistrito,
+                'source'  => 'local'
+            ]);
+        }
+
+        // 2. Si no existe, proceder con la consulta a RENIEC
         $token = env('DECOLECTA_API_KEY');
 
         if (!$token) {
@@ -41,6 +60,11 @@ class DniController extends Controller
                 return response()->json([
                     'success' => true,
                     'nombre'  => $nombreCompleto,
+                    'telefono' => '',
+                    'departamento' => '',
+                    'direccion' => '',
+                    'provincia_distrito' => '',
+                    'source'  => 'api'
                 ]);
             }
 
