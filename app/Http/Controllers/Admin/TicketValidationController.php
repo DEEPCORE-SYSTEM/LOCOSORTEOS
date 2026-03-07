@@ -89,35 +89,11 @@ class TicketValidationController extends Controller
 
         $sorteos = \App\Models\Sorteo::where('estado', 'activo')->get();
 
-        $ticketsPorSorteo = [];
-        foreach ($sorteos as $sorteo) {
-            
-            $tickets = \App\Models\Ticket::where('sorteo_id', $sorteo->id)
-                ->pluck('estado', 'numero')
-                ->toArray();
-            
-            
-            $reservas = \App\Models\Compra::where('sorteo_id', $sorteo->id)
-                ->where('estado', 'pendiente')
-                ->get();
-                
-            foreach ($reservas as $reserva) {
-                $manuales = $reserva->detalles['numeros_manuales'] ?? [];
-                foreach ($manuales as $num) {
-                    $numStr = $this->formatearNumeroTicket($num, $sorteo);
-                    if (!isset($tickets[$numStr])) {
-                        $tickets[$numStr] = 'reservado';
-                    }
-                }
-            }
-            $ticketsPorSorteo[$sorteo->id] = $tickets;
-        }
-
         return Inertia::render('Admin/Tickets', [
             'comprasPaginated' => $comprasPaginated,
             'pendientesPaginated' => $pendientesPaginated,
             'sorteos' => $sorteos,
-            'ticketsData' => $ticketsPorSorteo,
+            'ticketsData' => [],
             'filters' => ['search' => $search, 'perPage' => $perPage]
         ]);
     }
@@ -289,8 +265,10 @@ class TicketValidationController extends Controller
                 ]
             ]);
 
-            
-            $ticketsOcupados = Ticket::where('sorteo_id', $compra->sorteo_id)->pluck('numero')->toArray();
+            // Only track genuinely occupied tickets to prevent memory explosion with pre-seeded 'disponible' rows
+            $ticketsOcupados = Ticket::where('sorteo_id', $compra->sorteo_id)
+                ->whereIn('estado', ['vendido', 'reservado', 'impreso'])
+                ->pluck('numero')->toArray();
             $sorteo = \App\Models\Sorteo::find($compra->sorteo_id);
 
             if ($modo === 'manual' && count($numerosManuales) > 0) {
@@ -404,6 +382,7 @@ class TicketValidationController extends Controller
         
         $ocupados = Ticket::where('sorteo_id', $sorteo->id)
             ->whereIn('numero', $numerosRequeridos)
+            ->whereIn('estado', ['vendido', 'reservado', 'impreso'])
             ->pluck('numero')->toArray();
 
         if (count($ocupados) > 0) {
@@ -413,41 +392,59 @@ class TicketValidationController extends Controller
             ], 422);
         }
 
-        
         DB::transaction(function () use ($sorteo, $numerosRequeridos, $request) {
             $adminUserId = auth()->id() ?? 1; 
-            
             
             $userOffline = \App\Models\User::firstOrCreate(
                 ['email' => 'impresion_' . $sorteo->id . '@sorteos.local'],
                 [
                     'name' => 'Lote Impreso ' . ($request->vendedor ? '(' . $request->vendedor . ')' : ''),
-                    'dni' => '00000000',
+                    'dni' => str_pad($sorteo->id, 8, '0', STR_PAD_LEFT), 
                     'password' => bcrypt('impresion_lote'),
                     'telefono' => '000000000',
                     'is_admin' => false
                 ]
             );
 
-            
-            $ticketsData = [];
+            // Fetch exactly which ones already exist in the DB (like 'disponible' ones)
+            $existentes = Ticket::where('sorteo_id', $sorteo->id)
+                ->whereIn('numero', $numerosRequeridos)
+                ->pluck('numero')->toArray();
+
+            $porCrear = array_diff($numerosRequeridos, $existentes);
             $now = now();
-            foreach ($numerosRequeridos as $numStr) {
-                $ticketsData[] = [
-                    'sorteo_id' => $sorteo->id,
-                    'numero' => $numStr,
-                    'estado' => 'impreso',
-                    'user_id' => $userOffline->id,
-                    'fecha_venta' => $now,
-                    'created_at' => $now,
-                    'updated_at' => $now
-                ];
+
+            // 1. Update existing 'disponible' tickets
+            if (count($existentes) > 0) {
+                Ticket::where('sorteo_id', $sorteo->id)
+                    ->whereIn('numero', $existentes)
+                    ->update([
+                        'estado' => 'impreso',
+                        'user_id' => $userOffline->id,
+                        'fecha_venta' => $now,
+                        'updated_at' => $now
+                    ]);
             }
-            
-            
-            $chunks = array_chunk($ticketsData, 500);
-            foreach ($chunks as $chunk) {
-                Ticket::insert($chunk);
+
+            // 2. Insert new tickets that weren't in the DB at all
+            if (count($porCrear) > 0) {
+                $ticketsData = [];
+                foreach ($porCrear as $numStr) {
+                    $ticketsData[] = [
+                        'sorteo_id' => $sorteo->id,
+                        'numero' => $numStr,
+                        'estado' => 'impreso',
+                        'user_id' => $userOffline->id,
+                        'fecha_venta' => $now,
+                        'created_at' => $now,
+                        'updated_at' => $now
+                    ];
+                }
+                
+                $chunks = array_chunk($ticketsData, 500);
+                foreach ($chunks as $chunk) {
+                    Ticket::insert($chunk);
+                }
             }
         });
 
@@ -469,9 +466,16 @@ class TicketValidationController extends Controller
         $pdfFilename = "Talonario_{$sorteo->id}_{$desde}_{$hasta}.pdf";
         $pdfRelativePath = "exports/{$pdfFilename}";
 
+        if (!\Illuminate\Support\Facades\Storage::disk('public')->exists('exports')) {
+            \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('exports');
+        }
+
+        // The blade view expects $chunks of 10 tickets per page
+        $numChunks = array_chunk($numerosRequeridos, 10);
+
         $pdf = \Spatie\LaravelPdf\Facades\Pdf::view('pdf.tickets', [
                 'sorteo' => $sorteo,
-                'numeros' => $numerosRequeridos,
+                'chunks' => $numChunks,
                 'vendedor' => $request->vendedor
             ])
             ->format('A4');

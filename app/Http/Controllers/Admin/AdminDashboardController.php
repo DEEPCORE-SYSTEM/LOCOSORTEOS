@@ -8,125 +8,195 @@ use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $today = now()->startOfDay();
-        $startOfWeek = now()->startOfWeek();
-        
-        
-        $pendingTicketsCount = \App\Models\Compra::where('estado', 'pendiente')->count();
-        $activeSorteosCount = \App\Models\Sorteo::whereIn('estado', ['activo', 'programado'])->count();
-        
-        $totalTicketsSold = \App\Models\Ticket::where('estado', 'vendido')->count();
-        $ticketsSoldToday = \App\Models\Ticket::where('estado', 'vendido')->where('created_at', '>=', $today)->count();
-        
-        
-        $totalRevenue = \App\Models\Compra::where('estado', 'aprobado')->sum('total');
-        $revenueThisWeek = \App\Models\Compra::where('estado', 'aprobado')->where('created_at', '>=', $startOfWeek)->sum('total');
-        $revenuePct = $totalRevenue > 0 ? round(($revenueThisWeek / $totalRevenue) * 100, 1) : 0;
+        $periodo = $request->input('periodo', 'hoy');
 
-        
-        $ventasSemana = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            $count = \App\Models\Ticket::where('estado', 'vendido')
-                ->whereDate('created_at', $date->toDateString())
-                ->count();
-            $ventasSemana[] = [
-                'day' => $date->locale('es')->shortDayName, 
-                'tickets' => $count
-            ];
-        }
-
-        
-        $rendimientoSorteos = \App\Models\Sorteo::whereIn('estado', ['activo', 'programado'])
-            ->withCount(['tickets as sold' => function($q) { $q->where('estado', 'vendido'); }])
-            ->take(3)
-            ->get()
-            ->map(function ($s) {
-                $progress = $s->cantidad_tickets > 0 ? round(($s->sold / $s->cantidad_tickets) * 100, 1) : 0;
-                return [
-                    'id' => $s->id,
-                    'name' => $s->nombre,
-                    'price' => $s->precio_ticket,
-                    'status' => ucfirst($s->estado), 
-                    'sold' => $s->sold,
-                    'total_tickets' => $s->cantidad_tickets,
-                    'progress' => $progress,
-                    'revenue' => $s->sold * $s->precio_ticket
-                ];
-            });
-
-        
-        $transacciones = \App\Models\Compra::with('user:id,name')
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get()
-            ->map(function ($c) {
-                return [
-                    'id' => $c->id,
-                    'user_name' => $c->user->name ?? 'Usuario Físico',
-                    'method' => $c->metodo_pago,
-                    'amount' => $c->total,
-                    'status' => ucfirst($c->estado),
-                    'date' => $c->created_at->format('d M Y - h:i A'),
-                    'time_ago' => $c->created_at->locale('es')->diffForHumans()
-                ];
-            });
-
-        
-        
-        $metodos = \App\Models\Compra::selectRaw('metodo_pago, sum(total) as revenue')
-            ->where('estado', 'aprobado')
-            ->whereIn('metodo_pago', ['yape', 'plin', 'transferencia', 'efectivo', 'web'])
-            ->groupBy('metodo_pago')
-            ->pluck('revenue', 'metodo_pago')->toArray();
+        // Cache for 2 minutes using period as key
+        $dashboardData = \Illuminate\Support\Facades\Cache::remember('admin_dashboard_data_' . $periodo, 120, function () use ($periodo) {
             
-        $totalMetodos = array_sum($metodos);
-        $origenPagos = [
-            'yape' => ['amount' => $metodos['yape'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['yape'] ?? 0) / $totalMetodos) * 100) : 0],
-            'plin' => ['amount' => $metodos['plin'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['plin'] ?? 0) / $totalMetodos) * 100) : 0],
-            'transferencia' => ['amount' => $metodos['transferencia'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['transferencia'] ?? 0) / $totalMetodos) * 100) : 0],
-            'efectivo' => ['amount' => $metodos['efectivo'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['efectivo'] ?? 0) / $totalMetodos) * 100) : 0]
-        ];
+            $startDate = null;
+            $endDate = now();
+            $periodLabel = 'Desde siempre';
 
-        
-        $topDeptos = \App\Models\Ticket::join('users', 'tickets.user_id', '=', 'users.id')
-            ->whereNotNull('users.departamento')
-            ->where('tickets.estado', 'vendido') 
-            ->selectRaw('users.departamento, count(tickets.id) as total')
-            ->groupBy('users.departamento')
-            ->orderByDesc('total')
-            ->take(3)
-            ->get();
-        
-        $deptFallback = [];
-        if ($topDeptos->isEmpty()) {
-            $deptFallback = [
-                ['departamento' => 'Lima', 'total' => 280],
-                ['departamento' => 'Junin', 'total' => 120]
+            switch ($periodo) {
+                case 'semana':
+                    $startDate = now()->startOfWeek();
+                    $periodLabel = 'Esta semana';
+                    break;
+                case 'mes':
+                    $startDate = now()->startOfMonth();
+                    $periodLabel = 'Este mes';
+                    break;
+                case 'mes_anterior':
+                    $startDate = now()->subMonth()->startOfMonth();
+                    $endDate = now()->subMonth()->endOfMonth();
+                    $periodLabel = 'Mes anterior';
+                    break;
+                case 'ano':
+                    $startDate = now()->startOfYear();
+                    $periodLabel = 'Este año';
+                    break;
+                case 'hoy':
+                    $startDate = now()->startOfDay();
+                    $endDate = now()->endOfDay();
+                    $periodLabel = 'Hoy';
+                    break;
+                case 'todos':
+                default:
+                    $startDate = null;
+                    $endDate = null;
+                    break;
+            }
+
+            // --- Apply Date Filters
+            $compraQuery = \App\Models\Compra::query();
+            $ticketQuery = \App\Models\Ticket::query();
+            
+            if ($startDate && $endDate) {
+                $compraQuery->whereBetween('created_at', [$startDate, $endDate]);
+                $ticketQuery->whereBetween('created_at', [$startDate, $endDate]);
+            } elseif ($startDate) {
+                $compraQuery->where('created_at', '>=', $startDate);
+                $ticketQuery->where('created_at', '>=', $startDate);
+            }
+            
+            $pendingTicketsCount = \App\Models\Compra::where('estado', 'pendiente')->count(); // Pendientes always total time
+            $activeSorteosCount = \App\Models\Sorteo::whereIn('estado', ['activo', 'programado'])->count();
+            
+            // KPI: Venta de Tickets en el periodo elegido
+            $totalTicketsSold = $ticketQuery->where('estado', 'vendido')->count();
+            
+            // KPI: Ingresos (Compras aprobadas) en el periodo elegido
+            $totalRevenue = $compraQuery->where('estado', 'aprobado')->sum('total');
+
+            // --- Gráfica Rápida de Ventas de Semana (Últimos 7 días) vs Periodo
+            $ventasSemana = [];
+            // Siempre mostraremos los ultimos 7 dias en la bitácora gráfica como referencia
+            $last7Days = now()->subDays(6)->startOfDay();
+            $groupedTickets = \App\Models\Ticket::where('estado', 'vendido')
+                ->where('created_at', '>=', $last7Days)
+                ->selectRaw('DATE(created_at) as date, COUNT(id) as count')
+                ->groupBy('date')
+                ->pluck('count', 'date')->toArray();
+
+            for ($i = 6; $i >= 0; $i--) {
+                $dateString = now()->subDays($i)->toDateString();
+                $ventasSemana[] = [
+                    'day' => now()->subDays($i)->locale('es')->shortDayName,
+                    'tickets' => $groupedTickets[$dateString] ?? 0
+                ];
+            }
+
+            // --- Rendimiento Sorteos
+            $rendimientoSorteos = \App\Models\Sorteo::whereIn('estado', ['activo', 'programado'])
+                ->withCount(['tickets as sold' => function($q) { $q->where('estado', 'vendido'); }])
+                ->take(3)
+                ->get()
+                ->map(function ($s) {
+                    $progress = $s->cantidad_tickets > 0 ? round(($s->sold / $s->cantidad_tickets) * 100, 1) : 0;
+                    return [
+                        'id' => $s->id,
+                        'name' => $s->nombre,
+                        'price' => $s->precio_ticket,
+                        'status' => ucfirst($s->estado), 
+                        'sold' => $s->sold,
+                        'total_tickets' => $s->cantidad_tickets,
+                        'progress' => $progress,
+                        'revenue' => $s->sold * $s->precio_ticket
+                    ];
+                });
+
+            // --- Últimas 5 transacciones (globales, no afectadas por filtro)
+            $transacciones = \App\Models\Compra::with('user:id,name')
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get()
+                ->map(function ($c) {
+                    return [
+                        'id' => $c->id,
+                        'user_name' => $c->user->name ?? 'Usuario Físico',
+                        'method' => $c->metodo_pago,
+                        'amount' => $c->total,
+                        'status' => ucfirst($c->estado),
+                        'date' => $c->created_at->format('d M Y - h:i A'),
+                        'time_ago' => $c->created_at->locale('es')->diffForHumans()
+                    ];
+                });
+
+            // --- Métodos de pago (Afectados por filtro de periodo)
+            // Re-instantiate queries since they were mutated
+            $compraMetodosQuery = \App\Models\Compra::query()->where('estado', 'aprobado')->whereIn('metodo_pago', ['yape', 'plin', 'transferencia', 'efectivo', 'web']);
+            if ($startDate && $endDate) {
+                $compraMetodosQuery->whereBetween('created_at', [$startDate, $endDate]);
+            } elseif ($startDate) {
+                $compraMetodosQuery->where('created_at', '>=', $startDate);
+            }
+
+            $metodos = $compraMetodosQuery->selectRaw('metodo_pago, sum(total) as revenue')
+                ->groupBy('metodo_pago')
+                ->pluck('revenue', 'metodo_pago')->toArray();
+                
+            $totalMetodos = array_sum($metodos);
+            $origenPagos = [
+                'yape' => ['amount' => $metodos['yape'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['yape'] ?? 0) / $totalMetodos) * 100) : 0],
+                'plin' => ['amount' => $metodos['plin'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['plin'] ?? 0) / $totalMetodos) * 100) : 0],
+                'transferencia' => ['amount' => $metodos['transferencia'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['transferencia'] ?? 0) / $totalMetodos) * 100) : 0],
+                'efectivo' => ['amount' => $metodos['efectivo'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['efectivo'] ?? 0) / $totalMetodos) * 100) : 0]
             ];
-        }
 
-        return Inertia::render('Admin/Dashboard', [
-            'stats' => [
-                'revenue' => [
-                    'total' => number_format($totalRevenue, 0, '.', ','),
-                    'subtitle' => "+$revenuePct% esta semana"
+            // --- Top Departamentos (Usamos COMPRAS en lugar de TICKETS para ser MUCHISIMO MÁS RÁPIDOS)
+            // Las compras almacenan el id del usuario, se une con user y contamos.
+            $compraDeptoQuery = \App\Models\Compra::join('users', 'compras.user_id', '=', 'users.id')
+                ->where('compras.estado', 'aprobado')
+                ->whereNotNull('users.departamento');
+            
+            if ($startDate && $endDate) {
+                $compraDeptoQuery->whereBetween('compras.created_at', [$startDate, $endDate]);
+            } elseif ($startDate) {
+                $compraDeptoQuery->where('compras.created_at', '>=', $startDate);
+            }
+
+            $topDeptos = $compraDeptoQuery
+                ->selectRaw('users.departamento, count(compras.id) as total')
+                ->groupBy('users.departamento')
+                ->orderByDesc('total')
+                ->take(3)
+                ->get();
+            
+            $deptFallback = [];
+            if ($topDeptos->isEmpty()) {
+                $deptFallback = [
+                    ['departamento' => 'Lima', 'total' => 280],
+                    ['departamento' => 'Junin', 'total' => 120]
+                ];
+            }
+
+            return [
+                'stats' => [
+                    'revenue' => [
+                        'total' => number_format($totalRevenue, 0, '.', ','),
+                        'subtitle' => "En " . strtolower($periodLabel)
+                    ],
+                    'tickets' => [
+                        'total' => number_format($totalTicketsSold, 0, '.', ','),
+                        'subtitle' => "En " . strtolower($periodLabel)
+                    ],
+                    'pending' => $pendingTicketsCount,
+                    'activeDraws' => $activeSorteosCount
                 ],
-                'tickets' => [
-                    'total' => number_format($totalTicketsSold, 0, '.', ','),
-                    'subtitle' => "+$ticketsSoldToday hoy"
-                ],
-                'pending' => $pendingTicketsCount,
-                'activeDraws' => $activeSorteosCount
-            ],
-            'ventasSemana' => $ventasSemana,
-            'rendimientoSorteos' => $rendimientoSorteos,
-            'transacciones' => $transacciones,
-            'origenPagos' => $origenPagos,
-            'topDepartamentos' => $topDeptos->isEmpty() ? $deptFallback : $topDeptos
-        ]);
+                'ventasSemana' => $ventasSemana,
+                'rendimientoSorteos' => $rendimientoSorteos,
+                'transacciones' => $transacciones,
+                'origenPagos' => $origenPagos,
+                'topDepartamentos' => $topDeptos->isEmpty() ? $deptFallback : $topDeptos
+            ];
+        });
+
+        // Add filter state back to view
+        $dashboardData['filters'] = ['periodo' => $periodo];
+
+        return Inertia::render('Admin/Dashboard', $dashboardData);
     }
 
     public function sorteos(Request $request)

@@ -20,6 +20,7 @@ class TalonarioController extends Controller
         }
 
         $tickets = \App\Models\Ticket::where('sorteo_id', $sorteoId)
+            ->whereIn('estado', ['vendido', 'reservado', 'impreso'])
             ->pluck('estado', 'numero')
             ->toArray();
             

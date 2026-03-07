@@ -115,16 +115,16 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
     <AdminLayout currentView="admin-sorteos" pendingTicketsCount={pendingTicketsCount}>
       <Head title="Gestión de Sorteos | Admin Campoagro" />
 
-      {flash?.success && <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 px-4 py-3 rounded-xl border border-emerald-200 font-bold">{flash.success}</div>}
-      {flash?.error   && <div className="mb-4 text-sm text-red-700   bg-red-50   px-4 py-3 rounded-xl border border-red-200   font-bold">{flash.error}</div>}
+      {flash?.success && <div className="mb-4 text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800 font-bold">{flash.success}</div>}
+      {flash?.error   && <div className="mb-4 text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/30 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 font-bold">{flash.error}</div>}
 
       {/* Filtros y Búsqueda */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 mb-6 transition-colors duration-300">
         <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
           <select
             value={perPage}
             onChange={(e) => setPerPage(e.target.value)}
-            className="w-full md:w-auto border-slate-200 text-sm font-bold text-slate-600 py-2.5 px-3 rounded-lg focus:outline-none focus:border-emerald-500"
+            className="w-full md:w-auto border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 py-2.5 px-3 rounded-lg focus:outline-none focus:border-emerald-500"
           >
             <option value="25">25 Filas</option>
             <option value="50">50 Filas</option>
@@ -140,13 +140,13 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
               placeholder="Buscar sorteo..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg text-sm focus:outline-none focus:border-emerald-500 placeholder-slate-400 dark:placeholder-slate-500"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-slate-200 text-sm font-bold text-slate-600 py-2 px-3 rounded-lg focus:outline-none focus:border-emerald-500"
+            className="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 py-2 px-3 rounded-lg focus:outline-none focus:border-emerald-500"
           >
             <option value="todos">Todos los Estados</option>
             <option value="activo">Activos</option>
@@ -179,37 +179,37 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
           const isProgramado = sorteo.status === 'Programado';
 
           return (
-            <div key={sorteo.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div key={sorteo.id} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden relative transition-colors duration-300">
               <div className={`absolute top-4 right-4 text-xs font-black px-2 py-1 rounded-md uppercase ${
-                isActivo      ? 'bg-green-100 text-green-700' :
-                isProgramado  ? 'bg-slate-200 text-slate-600' : 'bg-amber-100 text-amber-700'
+                isActivo      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                isProgramado  ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
               }`}>
                 {sorteo.status}
               </div>
 
-              <div className="p-6 border-b border-slate-100">
-                <h3 className="font-black text-xl text-slate-900 mb-1 pr-24">{sorteo.name}</h3>
-                <p className="text-slate-500 text-sm mb-2">📅 Fecha cierre: {sorteo.date}</p>
-                <span className="inline-block bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded">{sorteo.type}</span>
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="font-black text-xl text-slate-900 dark:text-white mb-1 pr-24">{sorteo.name}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-2">📅 Fecha cierre: {sorteo.date}</p>
+                <span className="inline-block bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded">{sorteo.type}</span>
               </div>
 
-              <div className="p-6 bg-slate-50 grid grid-cols-2 gap-4">
+              <div className="p-6 bg-slate-50 dark:bg-slate-800/50 grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Tickets Vendidos</p>
-                  <p className="font-black text-emerald-600">{sorteo.sold} / {sorteo.total}</p>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Tickets Vendidos</p>
+                  <p className="font-black text-emerald-600 dark:text-emerald-400">{sorteo.sold} / {sorteo.total}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Recaudado</p>
-                  <p className="font-black text-slate-800">S/ {Number(sorteo.revenue).toLocaleString()}</p>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Recaudado</p>
+                  <p className="font-black text-slate-800 dark:text-white">S/ {Number(sorteo.revenue).toLocaleString()}</p>
                 </div>
               </div>
 
-              <div className="px-6 pb-4 pt-2 bg-slate-50">
+              <div className="px-6 pb-4 pt-2 bg-slate-50 dark:bg-slate-800/50">
                 <div className="flex justify-between items-center text-xs mb-1.5">
-                  <span className="font-bold text-slate-500 uppercase tracking-wide">Avance Tickets</span>
-                  <span className={`font-black ${isActivo ? 'text-emerald-600' : 'text-amber-500'}`}>{pct}%</span>
+                  <span className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Avance Tickets</span>
+                  <span className={`font-black ${isActivo ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500 dark:text-amber-400'}`}>{pct}%</span>
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                   <div
                     className={`h-full rounded-full ${
                       isActivo
@@ -223,11 +223,11 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
                 </div>
               </div>
 
-              <div className="p-4 border-t border-slate-100 flex gap-2">
+              <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex gap-2">
                 {/* Editar → va a la página completa SorteoForm */}
                 <a
                   href={`/admin/sorteos/${sorteo.id}/editar`}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"
+                  className="flex-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"
                 >
                   <Edit className="w-4 h-4" /> Editar
                 </a>
@@ -235,21 +235,21 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
                 {isActivo ? (
                   <button
                     onClick={() => handleToggleEstado(sorteo.id, 'finalizado', 'CERRAR VENTAS de')}
-                    className="flex-1 bg-slate-100 hover:bg-amber-100 hover:text-amber-700 text-slate-700 font-bold py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"
+                    className="flex-1 bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-700 dark:hover:text-amber-400 text-slate-700 dark:text-slate-200 font-bold py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"
                   >
                     <XCircle className="w-4 h-4" /> Cerrar Ventas
                   </button>
                 ) : isProgramado ? (
                   <button
                     onClick={() => handleToggleEstado(sorteo.id, 'activo', 'PUBLICAR')}
-                    className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"
+                    className="flex-1 bg-emerald-100 dark:bg-emerald-900/40 hover:bg-emerald-200 dark:hover:bg-emerald-800/60 text-emerald-700 dark:text-emerald-400 font-bold py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"
                   >
                     <CheckCircle className="w-4 h-4" /> Publicar
                   </button>
                 ) : (
                   <button
                     onClick={() => handleToggleEstado(sorteo.id, 'activo', 'REACTIVAR')}
-                    className="flex-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-700 text-slate-600 font-bold py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"
+                    className="flex-1 bg-slate-100 dark:bg-slate-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 hover:text-emerald-700 dark:hover:text-emerald-400 text-slate-600 dark:text-slate-300 font-bold py-2 rounded-lg flex justify-center items-center gap-2 transition-colors text-sm"
                   >
                     <Eye className="w-4 h-4" /> Reactivar
                   </button>
@@ -257,7 +257,7 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
 
                 <button
                   onClick={() => handleDelete(sorteo.id, sorteo.name)}
-                  className="px-4 border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 rounded-xl transition-colors shrink-0 flex items-center justify-center"
+                  className="px-4 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 rounded-xl transition-colors shrink-0 flex items-center justify-center"
                   title="Eliminar Sorteo"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -268,10 +268,10 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
         })}
 
         {filtered.length === 0 && (
-          <div className="md:col-span-2 bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-12 text-center">
-            <Trophy className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 font-bold text-lg">No hay sorteos con esos filtros</p>
-            <a href="/admin/sorteos/crear" className="mt-4 inline-flex items-center gap-2 text-emerald-600 font-bold hover:underline">
+          <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-12 text-center transition-colors">
+            <Trophy className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-500 dark:text-slate-400 font-bold text-lg">No hay sorteos con esos filtros</p>
+            <a href="/admin/sorteos/crear" className="mt-4 inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
               <Plus className="w-4 h-4" /> Crear nuevo sorteo
             </a>
           </div>
@@ -280,20 +280,20 @@ export default function Sorteos({ adminSorteosPaginated, filters = {} }) {
 
       {/* Paginación */}
       {paginationLinks.length > 3 && (
-        <div className="mt-6 p-4 border border-slate-100 rounded-2xl flex items-center justify-between flex-wrap gap-4 bg-white shadow-sm">
-          <p className="text-xs text-slate-500 font-bold w-full text-center md:text-left md:w-auto">
+        <div className="mt-6 p-4 border border-slate-100 dark:border-slate-700 rounded-2xl flex items-center justify-between flex-wrap gap-4 bg-white dark:bg-slate-800 shadow-sm transition-colors duration-300">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-bold w-full text-center md:text-left md:w-auto">
             Mostrando {adminSorteosPaginated.current_page} de {adminSorteosPaginated.last_page} ({adminSorteosPaginated.total} totales)
           </p>
           <div className="flex gap-1 flex-wrap justify-center w-full md:justify-end md:w-auto">
             {paginationLinks.map((link, idx) => (
               <div key={idx}>
                 {link.url === null ? (
-                    <span className="px-3 py-1.5 border border-slate-200 text-slate-400 rounded-lg bg-slate-50 cursor-not-allowed text-xs font-bold" dangerouslySetInnerHTML={{ __html: link.label }} />
+                    <span className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 rounded-lg bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed text-xs font-bold" dangerouslySetInnerHTML={{ __html: link.label }} />
                 ) : (
                     <button
                       type="button"
                       onClick={() => router.get(link.url, { search: searchQuery, status: statusFilter, perPage: perPage }, { preserveState: true })}
-                      className={`px-3 py-1.5 border border-slate-200 rounded-lg transition-colors text-xs font-bold ${link.active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                      className={`px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors text-xs font-bold ${link.active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                       dangerouslySetInnerHTML={{ __html: link.label }}
                     />
                 )}

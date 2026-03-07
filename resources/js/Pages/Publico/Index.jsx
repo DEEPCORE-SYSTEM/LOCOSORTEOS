@@ -74,9 +74,9 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
 
   
   const ticketClass = (ticket) => {
-    if (ticket.estado === "vendido") return "bg-red-400 text-white cursor-not-allowed opacity-70 scale-95";
-    if (seleccionados.includes(ticket.id)) return "bg-emerald-500 text-white ring-2 ring-emerald-300 scale-105 shadow-lg shadow-emerald-200";
-    return "bg-white border border-slate-200 text-slate-700 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700";
+    if (ticket.estado === "vendido") return "bg-red-400 text-white cursor-not-allowed opacity-70 scale-95 dark:opacity-50";
+    if (seleccionados.includes(ticket.id)) return "bg-emerald-500 text-white ring-2 ring-emerald-300 scale-105 shadow-lg shadow-emerald-200 dark:shadow-emerald-900";
+    return "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-400";
   };
 
   return (
@@ -144,20 +144,20 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
 
           {/* ════ PANEL IZQUIERDO: GRID DE TICKETS ════ */}
           <div className="flex-1">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+              <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-black text-slate-900">Selecciona tus Números</h2>
-                  <p className="text-sm text-slate-500 font-medium">Haz click en los números que quieres. Verde = seleccionado, Rojo = vendido.</p>
+                  <h2 className="text-lg font-black text-slate-900 dark:text-white">Selecciona tus Números</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Haz click en los números que quieres. Verde = seleccionado, Rojo = vendido.</p>
                 </div>
-                <div className="flex gap-3 text-xs font-bold shrink-0">
-                  <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-white border border-slate-200 inline-block" /> Libre</span>
+                <div className="flex gap-3 text-xs font-bold shrink-0 dark:text-slate-300">
+                  <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 inline-block" /> Libre</span>
                   <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-emerald-500 inline-block" /> Selec.</span>
                   <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-red-400 inline-block" /> Vendido</span>
                 </div>
               </div>
 
-              <div className="p-4 max-h-[520px] overflow-y-auto">
+              <div className="p-4 max-h-[520px] overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 gap-1.5">
                   {tickets.map(ticket => (
                     <button
@@ -173,8 +173,8 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
               </div>
 
               {/* Pie del grid */}
-              <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-wrap gap-3 items-center justify-between">
-                <p className="text-sm text-slate-600 font-bold">
+              <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex flex-wrap gap-3 items-center justify-between">
+                <p className="text-sm text-slate-600 dark:text-slate-400 font-bold">
                   {seleccionados.length === 0
                     ? "No has seleccionado ningún número"
                     : `${seleccionados.length} número${seleccionados.length > 1 ? 's' : ''} seleccionado${seleccionados.length > 1 ? 's' : ''}`}
@@ -192,18 +192,18 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
 
             {/* Premios del sorteo */}
             {sorteo.premios?.length > 0 && (
-              <div className="mt-6 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                <h3 className="font-black text-slate-900 mb-4 flex items-center gap-2">
+              <div className="mt-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 transition-colors duration-300">
+                <h3 className="font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-amber-500" /> Premios de este Sorteo
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {sorteo.premios.map((premio, i) => (
-                    <div key={i} className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden text-center p-3">
+                    <div key={i} className="bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-100 dark:border-slate-600 overflow-hidden text-center p-3 transition-colors duration-300">
                       {premio.imagen && (
                         <img src={premio.imagen} alt={premio.nombre} className="w-full h-20 object-cover rounded-lg mb-2" />
                       )}
-                      <p className="font-black text-slate-800 text-sm">{premio.nombre}</p>
-                      {premio.descripcion && <p className="text-xs text-slate-500 mt-0.5">{premio.descripcion}</p>}
+                      <p className="font-black text-slate-800 dark:text-slate-200 text-sm">{premio.nombre}</p>
+                      {premio.descripcion && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{premio.descripcion}</p>}
                     </div>
                   ))}
                 </div>
@@ -213,39 +213,39 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
 
           {/* ════ PANEL DERECHO: RESUMEN + PAGO ════ */}
           <div className="w-full xl:w-96 shrink-0">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 sticky top-24">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 sticky top-24 transition-colors duration-300">
               {/* Resumen */}
-              <div className="p-6 border-b border-slate-100">
-                <h3 className="font-black text-slate-900 text-lg mb-4">Resumen de Compra</h3>
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="font-black text-slate-900 dark:text-white text-lg mb-4">Resumen de Compra</h3>
 
                 {seleccionados.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400">
+                  <div className="text-center py-8 text-slate-400 dark:text-slate-500">
                     <Ticket className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="font-medium text-sm">Selecciona números del panel izquierdo</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto custom-scrollbar">
                       {seleccionados.map(id => {
                         const t = tickets.find(t => t.id === id);
                         return (
-                          <span key={id} className="bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-1 rounded-lg flex items-center gap-1">
+                          <span key={id} className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border dark:border-emerald-800 text-xs font-black px-2.5 py-1 rounded-lg flex items-center gap-1">
                             #{t?.numero}
-                            <button onClick={() => toggle(id)} className="hover:text-red-500 ml-0.5"><X className="w-3 h-3" /></button>
+                            <button onClick={() => toggle(id)} className="hover:text-red-500 dark:hover:text-red-400 ml-0.5 transition-colors"><X className="w-3 h-3" /></button>
                           </span>
                         );
                       })}
                     </div>
 
-                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2 text-sm">
-                      <div className="flex justify-between font-medium text-slate-600">
-                        <span>Tickets</span><span>{seleccionados.length}</span>
+                    <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 border border-slate-100 dark:border-slate-600 space-y-2 text-sm transition-colors duration-300">
+                      <div className="flex justify-between font-medium text-slate-600 dark:text-slate-400">
+                        <span>Tickets</span><span className="dark:text-white">{seleccionados.length}</span>
                       </div>
-                      <div className="flex justify-between font-medium text-slate-600">
-                        <span>Precio c/u</span><span>S/ {sorteo.precio_ticket}</span>
+                      <div className="flex justify-between font-medium text-slate-600 dark:text-slate-400">
+                        <span>Precio c/u</span><span className="dark:text-white">S/ {sorteo.precio_ticket}</span>
                       </div>
-                      <div className="flex justify-between font-black text-slate-900 text-lg pt-2 border-t border-slate-200">
-                        <span>Total</span><span className="text-emerald-700">S/ {total.toFixed(2)}</span>
+                      <div className="flex justify-between font-black text-slate-900 dark:text-white text-lg pt-2 border-t border-slate-200 dark:border-slate-600">
+                        <span>Total</span><span className="text-emerald-700 dark:text-emerald-400">S/ {total.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -256,7 +256,7 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
               {!isLoggedIn ? (
                 <div className="p-6 text-center">
                   <Info className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-                  <p className="font-bold text-slate-700 mb-4">Debes iniciar sesión para comprar</p>
+                  <p className="font-bold text-slate-700 dark:text-slate-300 mb-4">Debes iniciar sesión para comprar</p>
                   <a href="/login" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
                     <Ticket className="w-5 h-5" /> Iniciar Sesión para Comprar
                   </a>
@@ -265,7 +265,7 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
                   {/* Método de pago */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Método de Pago</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-400 mb-2 uppercase tracking-wider">Método de Pago</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { value: "yape", label: "YAPE", color: "bg-[#742284] hover:bg-[#5e1a6a]" },
@@ -281,18 +281,18 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
                         </button>
                       ))}
                     </div>
-                    <div className="mt-3 bg-slate-50 rounded-xl p-3 border border-slate-100 text-center">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Transferir a nombre de:</p>
-                      <p className="font-black text-sm text-slate-800 mt-1">{razonSocial}</p>
+                    <div className="mt-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 border border-slate-100 dark:border-slate-600 text-center transition-colors duration-300">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Transferir a nombre de:</p>
+                      <p className="font-black text-sm text-slate-800 dark:text-slate-200 mt-1">{razonSocial}</p>
                     </div>
                   </div>
 
                   {/* Subir comprobante */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Comprobante de Pago</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-400 mb-2 uppercase tracking-wider">Comprobante de Pago</label>
                     <div
                       onClick={() => fileRef.current?.click()}
-                      className={`relative border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${comprobantePreview ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'}`}
+                      className={`relative border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${comprobantePreview ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'border-slate-200 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
                     >
                       {comprobantePreview ? (
                         <div className="relative">
@@ -300,16 +300,16 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
                           <button
                             type="button"
                             onClick={e => { e.stopPropagation(); setComprobante(null); setComprobantePreview(null); }}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md"
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-600"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ) : (
                         <div>
-                          <Upload className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                          <p className="text-sm font-bold text-slate-500">Click para subir captura</p>
-                          <p className="text-xs text-slate-400 mt-1">JPG, PNG, WEBP hasta 5MB</p>
+                          <Upload className="w-8 h-8 text-slate-300 dark:text-slate-500 mx-auto mb-2" />
+                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Click para subir captura</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">JPG, PNG, WEBP hasta 5MB</p>
                         </div>
                       )}
                       <input

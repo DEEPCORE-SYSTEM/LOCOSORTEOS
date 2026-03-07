@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Trophy, PlayCircle, 
   Ticket, Users, Megaphone, ArrowLeft, BellRing, Award
 } from 'lucide-react';
+import ThemeToggle from '../Components/ThemeToggle';
 
 export default function AdminLayout({ children, currentView = 'admin-dashboard' }) {
   const { flash, globalPendingTicketsCount = 0, globalPendingTickets = [] } = usePage().props;
@@ -26,9 +27,9 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
   }, [flash]);
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] flex flex-col md:flex-row font-sans text-slate-900">
+    <div className="min-h-screen bg-[#F4F6F9] dark:bg-slate-900 flex flex-col md:flex-row font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
       {/* Admin Sidebar - VERDE AGRÓNOMO ORIGINAL */}
-      <aside className="w-full md:w-64 bg-[#064E3B] text-slate-300 flex flex-col shrink-0 md:h-screen md:sticky md:top-0">
+      <aside className="w-full md:w-64 bg-[#064E3B] dark:bg-emerald-950 text-slate-300 flex flex-col shrink-0 md:h-screen md:sticky md:top-0 transition-colors duration-300">
         <div className="p-4 md:p-4 border-b border-emerald-800/50 flex justify-between items-center">
           <div className="w-full">
             <Link href="/" className="block w-full">
@@ -74,7 +75,7 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
       <main className="flex-1 w-full max-w-full overflow-y-auto p-8 md:p-8">
         {/* Header Superior del Main */}
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-black text-slate-900">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">
             {currentView === 'admin-dashboard' }
             {currentView === 'admin-sorteos' && 'Administrar Sorteos'}
             {currentView === 'admin-nuevo-sorteo' && 'Crear Sorteo'}
@@ -87,11 +88,12 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
             {currentView === 'admin-difusion' && 'Canal de Difusión'}
           </h2>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {/* Notificaciones */}
             <div className="relative">
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className={`p-2 rounded-full shadow-sm relative transition-colors ${isNotificationsOpen ? 'bg-emerald-50 text-emerald-600' : 'bg-white text-slate-500 hover:text-emerald-600'}`}
+                className={`p-2 rounded-full shadow-sm relative transition-colors ${isNotificationsOpen ? 'bg-emerald-50 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'}`}
               >
                 <BellRing className="w-5 h-5" />
                 {globalPendingTicketsCount > 0 && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>}
@@ -101,9 +103,9 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
               {isNotificationsOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)}></div>
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden transform origin-top-right animate-in fade-in scale-95 duration-200">
-                    <div className="bg-slate-50 border-b border-slate-100 px-4 py-3 flex items-center justify-between">
-                      <h3 className="font-extrabold text-slate-800 text-sm">Notificaciones</h3>
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 z-50 overflow-hidden transform origin-top-right animate-in fade-in scale-95 duration-200">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+                      <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm">Notificaciones</h3>
                       <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-full">{globalPendingTicketsCount} nuevas</span>
                     </div>
                     
@@ -153,16 +155,16 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
             </div>
 
             <div className="relative group">
-              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-200 cursor-pointer hover:border-emerald-200 transition-colors">
-                <div className="bg-emerald-100 w-8 h-8 rounded-full flex items-center justify-center text-emerald-700 font-bold">A</div>
-                <span className="font-bold text-sm hidden md:block text-slate-700">Admin CampoAgro</span>
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-full shadow-sm border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
+                <div className="bg-emerald-100 dark:bg-emerald-900/50 w-8 h-8 rounded-full flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold">A</div>
+                <span className="font-bold text-sm hidden md:block text-slate-700 dark:text-slate-200">Admin CampoAgro</span>
               </div>
               
               {/* Dropdown Menu */}
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all transform origin-top-right scale-95 group-hover:scale-100">
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all transform origin-top-right scale-95 group-hover:scale-100">
                 <Link 
                   href="/admin/perfil" 
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                 >
                   <Users className="w-4 h-4" /> Mi Perfil
                 </Link>

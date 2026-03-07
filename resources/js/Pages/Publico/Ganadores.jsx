@@ -51,15 +51,15 @@ export default function Ganadores({ sorteosPaginated, filters = {} }) {
   return (
     <PublicLayout isLoggedIn={!!auth?.user} currentUser={auth?.user}>
       <Head title="Nuestros Ganadores | Sorteos CampoAgro" />
-      <section className="bg-[#F4F6F9] min-h-screen pb-20">
+      <section className="bg-[#F4F6F9] dark:bg-slate-950 min-h-screen pb-20 transition-colors duration-300">
         
         {/* HEADER DE SORTEOS (Tabs Dinámicos por Sorteo) */}
-        <div className="bg-white shadow-sm border-b border-gray-200 sticky top-[60px] md:top-[68px] z-40">
+        <div className="bg-white dark:bg-slate-900 shadow-sm border-b border-gray-200 dark:border-slate-800 sticky top-[60px] md:top-[68px] z-40 transition-colors duration-300">
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="flex overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-6">
               <button 
                 onClick={() => setActiveSorteoTab('all')} 
-                className={`whitespace-nowrap py-4 font-bold text-sm border-b-4 transition-colors ${activeSorteoTab === 'all' ? 'border-amber-400 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`whitespace-nowrap py-4 font-bold text-sm border-b-4 transition-colors ${activeSorteoTab === 'all' ? 'border-amber-400 text-slate-900 dark:text-white' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
               >
                 Todos los Sorteos
               </button>
@@ -67,7 +67,7 @@ export default function Ganadores({ sorteosPaginated, filters = {} }) {
                 <button 
                   key={sorteo.id}
                   onClick={() => setActiveSorteoTab(sorteo.id)} 
-                  className={`whitespace-nowrap py-4 font-bold text-sm border-b-4 transition-colors ${activeSorteoTab === sorteo.id ? 'border-amber-400 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  className={`whitespace-nowrap py-4 font-bold text-sm border-b-4 transition-colors ${activeSorteoTab === sorteo.id ? 'border-amber-400 text-slate-900 dark:text-white' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                 >
                   {sorteo.nombre}
                 </button>
@@ -77,14 +77,14 @@ export default function Ganadores({ sorteosPaginated, filters = {} }) {
         </div>
 
         <div className="container mx-auto px-4 max-w-6xl mt-8 pt-4">
-          <button onClick={() => window.history.back()} className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-bold mb-6 transition-colors">
+          <button onClick={() => window.history.back()} className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold mb-6 transition-colors">
             <ArrowLeft className="w-5 h-5" /> Volver atrás
           </button>
           <div className="text-center mb-12">
-            <h2 className="text-5xl md:text-7xl font-black text-[#0A2240] uppercase italic mb-4">
+            <h2 className="text-5xl md:text-7xl font-black text-[#0A2240] dark:text-white uppercase italic mb-4">
               ¡GANADORES!
             </h2>
-            <p className="text-slate-600 font-medium text-lg max-w-2xl mx-auto mb-8">
+            <p className="text-slate-600 dark:text-slate-400 font-medium text-lg max-w-2xl mx-auto mb-8">
               ¡Felicitamos a todos los afortunados ganadores de nuestros sorteos! Aquí podrás verificar la transparencia de cada entrega.
             </p>
 
@@ -95,7 +95,7 @@ export default function Ganadores({ sorteosPaginated, filters = {} }) {
                     <input 
                         type="text" 
                         placeholder="Buscar por DNI o N° de Ticket"
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 font-medium"
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-medium transition-colors"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
@@ -113,26 +113,26 @@ export default function Ganadores({ sorteosPaginated, filters = {} }) {
 
 
           {/* FILTROS (Originales) */}
-          <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 mb-8 space-y-4">
+          <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 mb-8 space-y-4 transition-colors duration-300">
             <div className="flex flex-wrap gap-2">
               {['Todos', 'CARRO', 'MOTO', 'SMARTPHONE', 'EFECTIVO'].map(cat => (
                 <button
                   key={cat}
                   onClick={() => setFilterCategory(cat)}
-                  className={`px-4 py-2 rounded-full font-bold text-xs md:text-sm transition-colors ${filterCategory === cat ? 'bg-emerald-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  className={`px-4 py-2 rounded-full font-bold text-xs md:text-sm transition-colors ${filterCategory === cat ? 'bg-emerald-900 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                 >
                   {cat === 'Todos' ? 'Todos' : cat.charAt(0) + cat.slice(1).toLowerCase()}
                 </button>
               ))}
             </div>
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-100">
-              <p className="text-slate-500 font-bold text-sm w-full md:w-auto text-center md:text-left">
-                <span className="text-emerald-600">{totalFilteredWinners}</span> resultados mostrados
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-slate-500 dark:text-slate-400 font-bold text-sm w-full md:w-auto text-center md:text-left">
+                <span className="text-emerald-600 dark:text-emerald-400">{totalFilteredWinners}</span> resultados mostrados
               </p>
               <select
                 value={filterLocation || ''}
                 onChange={(e) => setFilterLocation(e.target.value)}
-                className="w-full md:w-64 bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500"
+                className="w-full md:w-64 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500 transition-colors"
               >
                 {locationsList.map(loc => (
                   <option key={loc} value={loc}>{loc}</option>
@@ -142,33 +142,33 @@ export default function Ganadores({ sorteosPaginated, filters = {} }) {
           </div>
 
           {/* LISTA DE GANADORES (Grilla Única Constante) */}
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden mb-8">
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden mb-8 transition-colors duration-300">
             <div className="p-6 md:p-10">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {allCurrentWinners.map((winner) => (
-                  <div key={winner.id} className="bg-slate-50 rounded-[1.5rem] p-6 relative flex flex-col hover:shadow-md hover:bg-white transition-all group border border-slate-100 hover:border-emerald-200">
+                  <div key={winner.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-[1.5rem] p-6 relative flex flex-col hover:shadow-md hover:bg-white dark:hover:bg-slate-800 transition-all group border border-slate-100 dark:border-slate-700 hover:border-emerald-200 dark:hover:border-emerald-600">
                     <div className="flex justify-between items-center mb-5">
-                      <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-md tracking-widest bg-emerald-100 text-emerald-800">
+                      <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-md tracking-widest bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
                         Ticket # {winner.ticket}
                       </span>
                     </div>
 
                     <div className="flex flex-col items-center text-center mb-6">
-                      <div className="w-16 h-16 rounded-full bg-white border-4 border-slate-100 shadow-sm flex items-center justify-center text-2xl font-black text-slate-400 group-hover:bg-amber-400 group-hover:text-slate-900 group-hover:border-amber-200 transition-colors mb-3">
+                      <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-700 border-4 border-slate-100 dark:border-slate-600 shadow-sm flex items-center justify-center text-2xl font-black text-slate-400 group-hover:bg-amber-400 group-hover:text-slate-900 group-hover:border-amber-200 transition-colors mb-3">
                         {winner.user.charAt(0)}
                       </div>
-                      <p className="font-black text-slate-800 text-base leading-tight mb-1">{winner.user}</p>
-                      <p className="text-xs text-slate-500 mb-1">DNI: ••••{winner.dni.slice(-4)}</p>
+                      <p className="font-black text-slate-800 dark:text-slate-200 text-base leading-tight mb-1">{winner.user}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">DNI: ••••{winner.dni.slice(-4)}</p>
                       {winner.departamento && (
-                        <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mt-1">
+                        <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mt-1">
                           📍 {winner.departamento}
                         </span>
                       )}
                     </div>
 
-                    <div className="mt-auto bg-white border border-slate-200 p-4 rounded-xl text-center shadow-sm">
-                      <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest mb-1">Premio Ganado</p>
-                      <p className="font-black text-[#0A2240] text-sm">{winner.premio}</p>
+                    <div className="mt-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 rounded-xl text-center shadow-sm">
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-widest mb-1">Premio Ganado</p>
+                      <p className="font-black text-[#0A2240] dark:text-white text-sm">{winner.premio}</p>
                     </div>
                   </div>
                 ))}
@@ -177,9 +177,9 @@ export default function Ganadores({ sorteosPaginated, filters = {} }) {
           </div>
 
           {totalFilteredWinners === 0 && (
-            <div className="text-center py-20 bg-white rounded-[2rem] shadow-sm border border-slate-100 mt-8">
-              <Trophy className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-              <p className="text-slate-500 font-bold text-lg">No se encontraron ganadores con esos criterios.</p>
+            <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 mt-8">
+              <Trophy className="w-16 h-16 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
+              <p className="text-slate-500 dark:text-slate-400 font-bold text-lg">No se encontraron ganadores con esos criterios.</p>
             </div>
           )}
 
@@ -190,13 +190,13 @@ export default function Ganadores({ sorteosPaginated, filters = {} }) {
                 {paginationLinks.map((link, idx) => (
                   <div key={idx}>
                     {link.url === null ? (
-                        <span className="px-5 py-2.5 border border-slate-200 text-slate-400 rounded-xl bg-white cursor-not-allowed text-sm font-bold block min-w-[44px] text-center" dangerouslySetInnerHTML={{ __html: link.label }} />
+                        <span className="px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 rounded-xl bg-white dark:bg-slate-900 cursor-not-allowed text-sm font-bold block min-w-[44px] text-center" dangerouslySetInnerHTML={{ __html: link.label }} />
                     ) : (
                         <button
                           type="button"
                           onClick={() => router.get(link.url, { search: searchTerm }, { preserveState: true })}
                           className={`px-5 py-2.5 border rounded-xl transition-all text-sm font-bold min-w-[44px] text-center shadow-sm ${
-                            link.active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 border-slate-200'
+                            link.active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 border-slate-200 dark:border-slate-700'
                           }`}
                           dangerouslySetInnerHTML={{ __html: link.label }}
                         />

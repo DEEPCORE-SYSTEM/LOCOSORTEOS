@@ -4,16 +4,17 @@ import {
   Ticket, Megaphone, Trophy, Users, LogOut, Menu, X, 
   AlertTriangle, Facebook, MessageCircle, Settings, Send 
 } from 'lucide-react';
+import ThemeToggle from '../Components/ThemeToggle';
 
 export default function PublicLayout({ children, isLoggedIn = false, currentUser = null }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { settings = {} } = usePage().props;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 md:pb-0">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 pb-20 md:pb-0 transition-colors duration-300">
       
       {/* HEADER CLARO Y AMIGABLE - AGRÓNOMO */}
-      <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100">
+      <header className="bg-white dark:bg-slate-900/95 dark:backdrop-blur-md sticky top-0 z-50 shadow-sm border-b border-gray-100 dark:border-slate-800 transition-colors duration-300">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           {/* Logo + Nombre empresa */}
           <div className="flex items-center gap-3">
@@ -24,16 +25,20 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
           </div>
 
           {/* Menú Desktop */}
-          <nav className="hidden lg:flex items-center gap-5 font-bold text-sm text-slate-600">
-            <Link href="/dashboard" className="flex items-center gap-1.5 hover:text-emerald-600 transition">
+          <nav className="hidden lg:flex items-center gap-5 font-bold text-sm text-slate-600 dark:text-slate-300">
+            <Link href="/dashboard" className="flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition">
               <Ticket className="w-4 h-4" /> Mis Tickets
             </Link>
-            <Link href="/difusion" className="flex items-center gap-1.5 hover:text-emerald-600 transition">
+            <Link href="/difusion" className="flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition">
               <Megaphone className="w-4 h-4" /> Canal Difusión
             </Link>
-            <Link href="/ganadores" className="flex items-center gap-1.5 hover:text-emerald-600 transition">
+            <Link href="/ganadores" className="flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition">
               <Trophy className="w-4 h-4 text-amber-500" /> Ganadores
             </Link>
+            
+            <div className="border-l border-slate-200 dark:border-slate-700 pl-4">
+               <ThemeToggle />
+            </div>
            
             {isLoggedIn ? (
               <div className="flex items-center gap-3 ml-2 border-l border-slate-200 pl-4">
@@ -55,18 +60,21 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
             )}
           </nav>
 
-          {/* Menú Hamburguesa Mobile */}
-          <button 
-            className="lg:hidden p-2 text-slate-600 hover:text-slate-900 bg-slate-100 rounded-lg"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+            {/* Menú Hamburguesa Mobile */}
+            <div className="lg:hidden flex items-center gap-2">
+              <ThemeToggle />
+              <button 
+                className="p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-lg"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
         </div>
 
         {/* Menú Mobile Desplegable */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-white px-4 py-4 space-y-4 border-t border-gray-100 shadow-lg absolute w-full z-50">
+          <div className="lg:hidden bg-white dark:bg-slate-900 px-4 py-4 space-y-4 border-t border-gray-100 dark:border-slate-800 shadow-lg absolute w-full z-50">
             {isLoggedIn && (
                <div className="flex items-center gap-3 bg-emerald-50 rounded-xl p-3 mb-4 border border-emerald-100">
                   <div className="w-10 h-10 bg-emerald-200 rounded-full flex items-center justify-center text-emerald-800">
@@ -113,7 +121,7 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
       <main>{children}</main>
 
       {/* FOOTER */}
-      <footer className="bg-white border-t border-gray-200 pt-16 pb-8 text-slate-600 text-sm">
+      <footer className="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 pt-16 pb-8 text-slate-600 dark:text-slate-400 text-sm transition-colors duration-300">
         <div className="container mx-auto px-4 max-w-6xl grid md:grid-cols-3 gap-10 text-center md:text-left mb-12">
           <div>
             <div className="flex items-center justify-center md:justify-start gap-2 mb-4">

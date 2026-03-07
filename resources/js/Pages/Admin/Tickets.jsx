@@ -84,6 +84,8 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportDesde, setExportDesde] = useState('');
   const [exportHasta, setExportHasta] = useState('');
+  const [exportFormat, setExportFormat] = useState('pdf');
+  const [exportVendedor, setExportVendedor] = useState('');
 
   const handleEditCompra = (compra) => {
     setCompraToEdit(compra);
@@ -112,17 +114,17 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
               Gestión de Tickets y Talonarios
             </h2>
-            <p className="text-slate-500 font-medium mt-1">
+            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
               Valida pagos online, revisa el historial de ventas o asigna tickets para venta física en calle.
             </p>
           </div>
         </div>
 
         {/* Action Tabs */}
-        <div className="flex space-x-2 bg-slate-100/50 p-1.5 rounded-xl border border-slate-200 overflow-x-auto">
+        <div className="flex space-x-2 bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto transition-colors">
           <button
             onClick={() => {
               setActiveTab('admin-tickets');
@@ -130,8 +132,8 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
             }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${
               activeTab === 'admin-tickets'
-                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/60'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-400 shadow-sm border border-slate-200/60 dark:border-slate-600'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
             }`}
           >
             <CheckCircle className="w-4 h-4" />
@@ -150,8 +152,8 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
             }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${
               activeTab === 'admin-lista-tickets'
-                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/60'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-400 shadow-sm border border-slate-200/60 dark:border-slate-600'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
             }`}
           >
             <Search className="w-4 h-4" />
@@ -165,8 +167,8 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
             }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${
               activeTab === 'admin-talonario'
-                ? 'bg-white text-purple-700 shadow-sm border border-slate-200/60'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                ? 'bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-400 shadow-sm border border-slate-200/60 dark:border-slate-600'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
             }`}
           >
             <Ticket className="w-4 h-4" />
@@ -322,16 +324,12 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
                       return;
                   }
                   if (activeSorteo && confirm(`¿Generar reporte para los tickets ${exportDesde} al ${exportHasta}?`)) {
-                      const formData = new FormData(e.target);
-                      const format = formData.get('exportFormat');
-                      const vendedor = formData.get('vendedor') || '';
-
                       axios.post('/admin/tickets/export-pdf', {
                           sorteo_id: activeSorteo.id,
-                          desde: exportDesde,
-                          hasta: exportHasta,
-                          formato: format,
-                          vendedor: vendedor
+                          desde: parseInt(exportDesde, 10),
+                          hasta: parseInt(exportHasta, 10),
+                          formato: exportFormat,
+                          vendedor: exportVendedor
                       }).then(res => {
                           if (res.data.status === 'success' || res.data.status === 'queued') {
                              if (res.data.url) {
@@ -347,7 +345,13 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
                                .finally(() => setIsLoadingTickets(false));
                           }
                       }).catch(err => {
-                          alert(err.response?.data?.message || 'Error al exportar');
+                          const data = err.response?.data;
+                          if (data?.errors) {
+                              const firstError = Object.values(data.errors)[0][0];
+                              alert('Error de validación: ' + firstError);
+                          } else {
+                              alert(data?.message || 'Error al exportar el talonario');
+                          }
                       });
                   }
                 }}>
@@ -389,16 +393,14 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-3">2. Formato de Exportación</label>
                     <div className="grid grid-cols-2 gap-3">
-                      <label className="border-2 border-emerald-500 bg-emerald-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer">
-                        <input type="radio" name="exportFormat" value="pdf" className="sr-only" defaultChecked />
-                        <FileText className="w-8 h-8 text-emerald-600 mb-2" />
-                        <span className="font-bold text-emerald-800 text-sm">PDF (Imprenta)</span>
-                      </label>
-                      <label className="border-2 border-slate-200 hover:border-emerald-300 bg-white rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer opacity-60 hover:opacity-100">
-                        <input type="radio" name="exportFormat" value="excel" className="sr-only" />
-                        <Upload className="w-8 h-8 text-slate-500 mb-2" />
-                        <span className="font-bold text-slate-700 text-sm">Excel / CSV</span>
-                      </label>
+                      <button type="button" onClick={() => setExportFormat('pdf')} className={`border-2 rounded-xl p-4 flex flex-col items-center justify-center transition-opacity ${exportFormat === 'pdf' ? 'border-emerald-500 bg-emerald-50 opacity-100' : 'border-slate-200 bg-white opacity-60 hover:opacity-100'}`}>
+                        <FileText className={`w-8 h-8 mb-2 ${exportFormat === 'pdf' ? 'text-emerald-600' : 'text-slate-500'}`} />
+                        <span className={`font-bold text-sm ${exportFormat === 'pdf' ? 'text-emerald-800' : 'text-slate-700'}`}>PDF (Imprenta)</span>
+                      </button>
+                      <button type="button" onClick={() => setExportFormat('excel')} className={`border-2 rounded-xl p-4 flex flex-col items-center justify-center transition-opacity ${exportFormat === 'excel' ? 'border-emerald-500 bg-emerald-50 opacity-100' : 'border-slate-200 bg-white opacity-60 hover:opacity-100'}`}>
+                        <Upload className={`w-8 h-8 mb-2 ${exportFormat === 'excel' ? 'text-emerald-600' : 'text-slate-500'}`} />
+                        <span className={`font-bold text-sm ${exportFormat === 'excel' ? 'text-emerald-800' : 'text-slate-700'}`}>Excel / CSV</span>
+                      </button>
                     </div>
                   </div>
 
@@ -406,6 +408,8 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">3. Asignar Lote a Vendedor (Opcional)</label>
                     <input type="text" name="vendedor" placeholder="Ej: Vendedor Centro - Juan"
+                      value={exportVendedor}
+                      onChange={e => setExportVendedor(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none text-sm" />
                   </div>
                 </form>
@@ -423,7 +427,7 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
                       <div>
                         <p className="text-[8px] font-bold text-slate-400 uppercase text-center mb-2">Talón Vendedor</p>
                         <p className="text-xs font-black text-slate-900 text-center mb-2 border-b border-slate-200 pb-1">
-                          Nº {exportDesde ? String(exportDesde).padStart(4, '0') : '0000'}
+                          Nº {exportDesde ? `${activeSorteo?.prefijo_ticket || ''}${String(exportDesde).padStart(activeSorteo?.digitos_ticket || 3, '0')}` : `${activeSorteo?.prefijo_ticket || ''}${'0'.padStart(activeSorteo?.digitos_ticket || 3, '0')}`}
                         </p>
                         <div className="space-y-2 mt-2">
                           <div className="border-b border-slate-300 pb-0.5"><p className="text-[7px] text-slate-400">Nombre:</p></div>
@@ -456,7 +460,7 @@ export default function Tickets({ comprasPaginated, pendientesPaginated, sorteos
                           <p className="text-[9px] text-emerald-600 font-bold mt-0.5">{activeSorteo.premios_descripcion}</p>
                         )}
                         <p className="text-2xl font-black font-mono text-slate-800 tracking-widest mt-2 border-y-2 border-slate-100 py-1">
-                          Nº {exportDesde ? String(exportDesde).padStart(4, '0') : '0000'}
+                          Nº {exportDesde ? `${activeSorteo?.prefijo_ticket || ''}${String(exportDesde).padStart(activeSorteo?.digitos_ticket || 3, '0')}` : `${activeSorteo?.prefijo_ticket || ''}${'0'.padStart(activeSorteo?.digitos_ticket || 3, '0')}`}
                         </p>
                       </div>
                       <div className="flex items-end justify-between mt-3 relative z-10">

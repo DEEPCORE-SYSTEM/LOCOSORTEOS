@@ -55,25 +55,29 @@ class HandleInertiaRequests extends Middleware
             },
             'globalPendingTicketsCount' => function () use ($request) {
                 if ($request->user() && $request->user()->is_admin) {
-                    return \App\Models\Compra::where('estado', 'pendiente')->count();
+                    return Cache::remember('global_pending_count', 60, function () {
+                        return \App\Models\Compra::where('estado', 'pendiente')->count();
+                    });
                 }
                 return 0;
             },
             'globalPendingTickets' => function () use ($request) {
                 if ($request->user() && $request->user()->is_admin) {
-                    return \App\Models\Compra::with('user')
-                        ->where('estado', 'pendiente')
-                        ->orderBy('created_at', 'desc')
-                        ->take(5)
-                        ->get()
-                        ->map(function($compra) {
-                            return [
-                                'id' => $compra->id,
-                                'user_name' => $compra->user ? $compra->user->name : 'Usuario',
-                                'total' => $compra->total,
-                                'time_ago' => $compra->created_at->diffForHumans(),
-                            ];
-                        });
+                    return Cache::remember('global_pending_list', 60, function () {
+                        return \App\Models\Compra::with('user')
+                            ->where('estado', 'pendiente')
+                            ->orderBy('created_at', 'desc')
+                            ->take(5)
+                            ->get()
+                            ->map(function($compra) {
+                                return [
+                                    'id' => $compra->id,
+                                    'user_name' => $compra->user ? $compra->user->name : 'Usuario',
+                                    'total' => $compra->total,
+                                    'time_ago' => $compra->created_at->diffForHumans(),
+                                ];
+                            });
+                    });
                 }
                 return [];
             },

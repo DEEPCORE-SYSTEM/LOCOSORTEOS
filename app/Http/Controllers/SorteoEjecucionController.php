@@ -19,34 +19,35 @@ class SorteoEjecucionController extends Controller
             abort(400, 'El sorteo ya fue ejecutado o no está disponible.');
         }
 
-        $ticketsVendidos = Ticket::where('sorteo_id', $sorteo->id)
+        $cantidadTicketsVendidos = Ticket::where('sorteo_id', $sorteo->id)
             ->where('estado', 'vendido')
-            ->pluck('id')
-            ->toArray();
-        if (empty($ticketsVendidos)) {
+            ->count();
+            
+        if ($cantidadTicketsVendidos === 0) {
             abort(400, 'No hay tickets vendidos.');
         }
 
-        if (count($ticketsVendidos) < count($sorteo->premios)) {
+        if ($cantidadTicketsVendidos < count($sorteo->premios)) {
             abort(400, sprintf(
                 'Tickets insuficientes. Disponibles: %d, Premios: %d',
-                count($ticketsVendidos),
+                $cantidadTicketsVendidos,
                 count($sorteo->premios)
             ));
         }
 
         try {
-            DB::transaction(function () use ($sorteo, $ticketsVendidos) {
-                shuffle($ticketsVendidos);
+            DB::transaction(function () use ($sorteo, $cantidadTicketsVendidos) {
+                // Fetch random winning tickets directly from the DB to save massive amounts of RAM
+                $ticketsGanadores = Ticket::where('sorteo_id', $sorteo->id)
+                    ->where('estado', 'vendido')
+                    ->inRandomOrder()
+                    ->take(count($sorteo->premios))
+                    ->get();
                 
                 $ticketsUsados = [];
 
-                foreach ($sorteo->premios as $premio) {
-                  
-                    $ticketsDisponibles = array_diff($ticketsVendidos, $ticketsUsados);
-                    $ticketId = $ticketsDisponibles[array_rand($ticketsDisponibles)];
-                    
-                    $ticketGanador = Ticket::find($ticketId);
+                foreach ($sorteo->premios as $index => $premio) {
+                    $ticketGanador = $ticketsGanadores[$index];
 
                     Ganador::create([
                         'premio_id'    => $premio->id,
@@ -57,7 +58,7 @@ class SorteoEjecucionController extends Controller
                         'tipo'         => 'automatico',
                     ]);
 
-                    $ticketsUsados[] = $ticketId;
+                    $ticketsUsados[] = $ticketGanador->id;
                 }
 
                 $sorteo->update(['estado' => 'finalizado']);
