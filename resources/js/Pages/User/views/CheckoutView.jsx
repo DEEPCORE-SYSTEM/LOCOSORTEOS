@@ -281,8 +281,8 @@ export default function CheckoutView({ currentUser, sorteo, sorteosActivos = [],
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2 bg-white rounded-xl p-3 border border-emerald-50">
                     {[
                       { label: 'Documento', value: currentUser?.dni },
-                      { label: 'Celular',   value: currentUser?.phone },
-                      { label: 'Ubicación', value: currentUser?.dept },
+                      { label: 'Celular',   value: currentUser?.telefono },
+                      { label: 'Ubicación', value: currentUser?.departamento },
                     ].map(({ label, value }, i) => (
                       <div key={label} className={`text-lg md:text-xl ${i > 0 ? 'border-t md:border-t-0 md:border-l border-emerald-50 pt-2 md:pt-0 pl-0 md:pl-3' : ''}`}>
                         <span className="block text-[10px] uppercase text-slate-400 font-bold">{label}</span>

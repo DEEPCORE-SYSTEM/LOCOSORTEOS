@@ -268,13 +268,23 @@ class PublicoController extends Controller
         }
 
         $search = $request->query('ticket_search');
-        $tickets = $sorteo ? $this->getTicketsDisponibles($sorteo->id, $search) : [];
+
+        $ticketsPaginator = $sorteo
+            ? $this->getTicketsDisponibles($sorteo->id, $search)
+            : null;
+
+        $tickets = [
+            'data'          => $ticketsPaginator?->items() ?? [],
+            'next_page_url' => $ticketsPaginator?->nextPageUrl(),
+        ];
+
+        $transactionsQuery = Compra::with(['sorteo:id,nombre', 'user:id,name,dni,telefono,departamento'])
+            ->where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(100);
 
         $transactions = $this->mapTransacciones(
-            Compra::with(['sorteo:id,nombre', 'user:id,name,dni,telefono,departamento'])
-                ->where('user_id', $request->user()->id)
-                ->orderBy('created_at', 'desc')
-                ->get()
+            $transactionsQuery->get()
         );
 
         return Inertia::render('User/Checkout', [

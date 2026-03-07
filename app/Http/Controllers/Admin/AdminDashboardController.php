@@ -284,7 +284,8 @@ class AdminDashboardController extends Controller
             $sorteo->premios()->createMany($data['premios']);
         }
 
-        \App\Jobs\GenerarTicketsJob::dispatch($sorteo);
+        // Generar tickets de forma síncrona para que queden disponibles inmediatamente
+        \App\Jobs\GenerarTicketsJob::dispatchSync($sorteo);
 
         return redirect()->route('admin.sorteos')->with('success', 'Sorteo creado exitosamente. Se están generando los tickets en segundo plano.');
     }
@@ -335,8 +336,8 @@ class AdminDashboardController extends Controller
     {
         $sorteo = \App\Models\Sorteo::findOrFail($id);
         
-        if ($sorteo->tickets()->count() > 0) {
-            return redirect()->back()->with('error', 'No puedes eliminar un sorteo que ya tiene tickets registrados.');
+        if ($sorteo->tickets()->whereIn('estado', ['vendido', 'reservado'])->count() > 0) {
+            return redirect()->back()->with('error', 'No puedes eliminar un sorteo que ya tiene tickets vendidos o reservados.');
         }
 
         $sorteo->premios()->delete();
