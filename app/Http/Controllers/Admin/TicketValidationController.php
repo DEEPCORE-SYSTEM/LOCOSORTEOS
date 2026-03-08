@@ -107,91 +107,94 @@ class TicketValidationController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $compra = Compra::findOrFail($id);
+        $result = DB::transaction(function () use ($id) {
+            $compra = Compra::whereKey($id)->lockForUpdate()->firstOrFail();
 
-        if ($compra->estado !== 'pendiente') {
-            return redirect()->back()->with('error', 'Esta compra ya fue procesada.');
-        }
+            if ($compra->estado !== 'pendiente') {
+                return ['ok' => false, 'message' => 'Esta compra ya fue procesada.'];
+            }
 
-        DB::transaction(function () use ($compra) {
-            $cantidad        = $compra->detalles['cantidad'] ?? 1;
-            $modo            = $compra->detalles['modo_seleccion'] ?? 'random';
-            $numerosManuales = $compra->detalles['numeros_manuales'] ?? [];
-            $sorteo          = \App\Models\Sorteo::find($compra->sorteo_id);
+            $cantidad = (int) ($compra->detalles['cantidad'] ?? 1);
+            $modo = $compra->detalles['modo_seleccion'] ?? 'random';
+            $numerosManuales = array_values(array_unique(array_map('strval', (array) ($compra->detalles['numeros_manuales'] ?? []))));
+            $sorteo = \App\Models\Sorteo::find($compra->sorteo_id);
 
             $numerosAsignados = [];
-            $ticketIds        = [];
+            $ticketIds = [];
 
-            if ($modo === 'manual' && count($numerosManuales) === (int)$cantidad) {
-                // Tickets con números específicos elegidos por el cliente
+            if ($modo === 'manual' && count($numerosManuales) === $cantidad) {
                 foreach ($numerosManuales as $num) {
                     $numFormateado = $this->formatearNumeroTicket($num, $sorteo);
 
-                    // Buscar ticket existente disponible con ese número
                     $ticket = Ticket::where('sorteo_id', $compra->sorteo_id)
                         ->where('numero', $numFormateado)
                         ->whereIn('estado', ['disponible', 'reservado'])
+                        ->lockForUpdate()
                         ->first();
 
-                    if (!$ticket) {
-                        // Si no existe con ese número o ya está ocupado, buscar uno libre al azar
+                    if (! $ticket) {
                         $ticket = Ticket::where('sorteo_id', $compra->sorteo_id)
                             ->where('estado', 'disponible')
-                            ->inRandomOrder()
+                            ->orderBy('id')
+                            ->lockForUpdate()
                             ->first();
 
-                        if (!$ticket) {
-                            abort(422, 'El sorteo está lleno. No quedan tickets disponibles.');
+                        if (! $ticket) {
+                            abort(422, 'El sorteo esta lleno. No quedan tickets disponibles.');
                         }
                     }
 
                     $ticket->update([
-                        'estado'      => 'vendido',
-                        'user_id'     => $compra->user_id,
+                        'estado' => 'vendido',
+                        'user_id' => $compra->user_id,
                         'fecha_venta' => now(),
                     ]);
 
                     $numerosAsignados[] = $ticket->numero;
-                    $ticketIds[]        = $ticket->id;
+                    $ticketIds[] = $ticket->id;
                 }
             } else {
-                // Tickets asignados al azar
-                for ($i = 0; $i < (int)$cantidad; $i++) {
+                for ($i = 0; $i < $cantidad; $i++) {
                     $ticket = Ticket::where('sorteo_id', $compra->sorteo_id)
                         ->where('estado', 'disponible')
-                        ->inRandomOrder()
+                        ->orderBy('id')
+                        ->lockForUpdate()
                         ->first();
 
-                    if (!$ticket) {
-                        abort(422, 'El sorteo está lleno. No quedan tickets disponibles.');
+                    if (! $ticket) {
+                        abort(422, 'El sorteo esta lleno. No quedan tickets disponibles.');
                     }
 
                     $ticket->update([
-                        'estado'      => 'vendido',
-                        'user_id'     => $compra->user_id,
+                        'estado' => 'vendido',
+                        'user_id' => $compra->user_id,
                         'fecha_venta' => now(),
                     ]);
 
                     $numerosAsignados[] = $ticket->numero;
-                    $ticketIds[]        = $ticket->id;
+                    $ticketIds[] = $ticket->id;
                 }
             }
 
-            // Vincular tickets a la compra
-            $compra->tickets()->attach($ticketIds);
+            $compra->tickets()->syncWithoutDetaching($ticketIds);
 
-            // Guardar números asignados en detalles y marcar aprobado
-            $detalles            = $compra->detalles ?? [];
-            $detalles['tickets'] = $numerosAsignados; // Cambiado de numeros_asignados a tickets para el frontend
+            $detalles = $compra->detalles ?? [];
+            $detalles['tickets'] = $numerosAsignados;
+
             $compra->update([
-                'estado'   => 'aprobado',
+                'estado' => 'aprobado',
                 'detalles' => $detalles,
             ]);
+
+            return ['ok' => true];
         });
+
+        if (! $result['ok']) {
+            return redirect()->back()->with('error', $result['message']);
+        }
 
         return redirect()->back()->with('success', 'Pago aprobado y tickets asignados exitosamente.');
     }
-
 
     public function reject(Request $request, $id)
     {
@@ -539,18 +542,41 @@ class TicketValidationController extends Controller
 
     public function destroyCompra($id)
     {
-        $compra = Compra::findOrFail($id);
+        DB::transaction(function () use ($id) {
+            $compra = Compra::with('tickets:id')
+                ->whereKey($id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        DB::transaction(function () use ($compra) {
-            
-            
-            Ticket::where('sorteo_id', $compra->sorteo_id)
-                ->where('user_id', $compra->user_id)
-                ->whereBetween('fecha_venta', [
-                    $compra->created_at->copy()->subMinutes(5), 
-                    $compra->created_at->copy()->addMinutes(5)
-                ])
-                ->delete();
+            $ticketIds = $compra->tickets->pluck('id')->all();
+
+            if (! empty($ticketIds)) {
+                Ticket::whereIn('id', $ticketIds)
+                    ->lockForUpdate()
+                    ->update([
+                        'estado' => 'disponible',
+                        'user_id' => null,
+                        'fecha_venta' => null,
+                        'updated_at' => now(),
+                    ]);
+
+                $compra->tickets()->detach();
+            } else {
+                // Fallback para compras historicas sin relacion en pivote.
+                Ticket::where('sorteo_id', $compra->sorteo_id)
+                    ->where('user_id', $compra->user_id)
+                    ->whereBetween('fecha_venta', [
+                        $compra->created_at->copy()->subMinutes(5),
+                        $compra->created_at->copy()->addMinutes(5),
+                    ])
+                    ->whereIn('estado', ['vendido', 'reservado'])
+                    ->update([
+                        'estado' => 'disponible',
+                        'user_id' => null,
+                        'fecha_venta' => null,
+                        'updated_at' => now(),
+                    ]);
+            }
 
             $compra->delete();
         });
