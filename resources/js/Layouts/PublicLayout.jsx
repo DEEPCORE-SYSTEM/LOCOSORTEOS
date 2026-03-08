@@ -8,7 +8,7 @@ import ThemeToggle from '../Components/ThemeToggle';
 
 export default function PublicLayout({ children, isLoggedIn = false, currentUser = null }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { settings = {}, sorteo } = usePage().props;
+  const { settings = {} } = usePage().props;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 pb-20 md:pb-0 transition-colors duration-300">
@@ -183,7 +183,7 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
       {/* MOBILE STICKY CTA BOTÓN */}
       <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-50 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
         <Link href="/dashboard" className="w-full bg-[#25D366] text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_4px_0_#1DA851] active:shadow-none active:translate-y-1 transition-all">
-          <Ticket className="w-6 h-6" /> {sorteo?.precio_ticket ? `¡Comprar Ticket S/${Math.floor(sorteo.precio_ticket)}!` : '¡Comprar Ticket!'}
+          <Ticket className="w-6 h-6" /> ¡Comprar Ticket!
         </Link>
       </div>
     </div>

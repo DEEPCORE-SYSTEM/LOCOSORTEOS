@@ -41,6 +41,8 @@ class PublicoController extends Controller
                 'plin_numero'  => $s['plin_numero']   ?? '',
                 'whatsapp'     => $s['whatsapp']      ?? '',
                 'razon_social' => $s['razon_social']  ?? 'INVERSIONES CampoAgro E.I.R.L.',
+                'tiktok_url'   => $s['tiktok_url']    ?? '',
+                'link_redes'   => $s['link_redes']    ?? '',
             ];
         });
     }

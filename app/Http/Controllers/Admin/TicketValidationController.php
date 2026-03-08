@@ -485,7 +485,7 @@ class TicketValidationController extends Controller
             return response()->json([
                 'status' => 'queued',
                 'message' => 'Exportación de Excel iniciada en segundo plano. El archivo estará listo en breve.',
-                'url' => asset("storage/{$filePath}")
+                'url' => "/storage/{$filePath}"
             ]);
         }
 
@@ -493,26 +493,29 @@ class TicketValidationController extends Controller
         $pdfFilename = "Talonario_{$sorteo->id}_{$desde}_{$hasta}.pdf";
         $pdfRelativePath = "exports/{$pdfFilename}";
 
-        if (!\Illuminate\Support\Facades\Storage::disk('public')->exists('exports')) {
-            \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('exports');
+        $publicExportPath = public_path("storage/exports");
+        if (!file_exists($publicExportPath)) {
+            mkdir($publicExportPath, 0755, true);
         }
 
-        // The blade view expects $chunks of 10 tickets per page
-        $numChunks = array_chunk($numerosRequeridos, 10);
+        // 16 tickets por hoja (2x8)
+        $numChunks = array_chunk($numerosRequeridos, 16);
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.tickets', [
                 'sorteo' => $sorteo,
                 'chunks' => $numChunks,
                 'vendedor' => $request->vendedor
-            ])->setPaper('a4', 'portrait');
+            ])
+            ->setPaper('a4', 'portrait')
+            ->setOption('isRemoteEnabled', true);
 
         
-        $pdf->save(storage_path("app/public/{$pdfRelativePath}"));
+        $pdf->save($publicExportPath . '/' . $pdfFilename);
 
         
         return response()->json([
             'status' => 'success',
-            'url' => asset("storage/{$pdfRelativePath}")
+            'url' => "/storage/{$pdfRelativePath}"
         ]);
     }
 
