@@ -22,8 +22,13 @@ export default function HistorialTickets({
   const paginationLinks = comprasPaginated?.links || [];
 
   const handleExportCsv = () => {
-      
-      alert('Funcionalidad de exportación en desarrollo.');
+      const params = new URLSearchParams();
+
+      if (searchQuery?.trim()) {
+        params.set('search', searchQuery.trim());
+      }
+
+      window.location.href = `/admin/export/compras?${params.toString()}`;
   };
 
   return (

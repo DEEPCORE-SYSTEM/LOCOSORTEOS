@@ -8,6 +8,112 @@ use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
 {
+    private function reconcileApprovedTicketsForSorteo(int $sorteoId): void
+    {
+        \App\Models\Compra::with(['tickets:id,numero', 'user:id'])
+            ->where('sorteo_id', $sorteoId)
+            ->where('estado', 'aprobado')
+            ->chunkById(100, function ($compras) use ($sorteoId) {
+                foreach ($compras as $compra) {
+                    $ticketsEsperados = collect($compra->detalles['tickets'] ?? $compra->detalles['numeros_asignados'] ?? [])
+                        ->filter()
+                        ->map(fn ($numero) => trim((string) $numero))
+                        ->unique()
+                        ->values();
+                    $cantidadEsperada = max((int) ($compra->detalles['cantidad'] ?? 0), $ticketsEsperados->count());
+
+                    if ($ticketsEsperados->isEmpty()) {
+                        $ticketIds = $compra->tickets->pluck('id')->all();
+
+                        if ($cantidadEsperada > count($ticketIds)) {
+                            $faltantes = $cantidadEsperada - count($ticketIds);
+                            $ticketsHuerfanos = \App\Models\Ticket::where('sorteo_id', $sorteoId)
+                                ->where('user_id', $compra->user_id)
+                                ->whereIn('estado', ['vendido', 'reservado'])
+                                ->whereDoesntHave('compras')
+                                ->orderByRaw('ABS(TIMESTAMPDIFF(SECOND, COALESCE(fecha_venta, created_at), ?))', [$compra->created_at])
+                                ->limit($faltantes)
+                                ->get(['id']);
+
+                            if ($ticketsHuerfanos->isNotEmpty()) {
+                                $compra->tickets()->syncWithoutDetaching($ticketsHuerfanos->pluck('id')->all());
+                            }
+                        }
+
+                        continue;
+                    }
+
+                    $ticketsRelacion = $compra->tickets->keyBy('numero');
+                    $ticketIds = [];
+
+                    foreach ($ticketsEsperados as $numero) {
+                        if ($ticketsRelacion->has($numero)) {
+                            $ticketIds[] = $ticketsRelacion[$numero]->id;
+                            continue;
+                        }
+
+                        $ticket = \App\Models\Ticket::firstOrNew([
+                            'sorteo_id' => $sorteoId,
+                            'numero' => $numero,
+                        ]);
+
+                        if ($ticket->exists) {
+                            $tieneCompraAsignada = $ticket->compras()->exists();
+
+                            if (
+                                $ticket->user_id &&
+                                (int) $ticket->user_id !== (int) $compra->user_id &&
+                                in_array($ticket->estado, ['vendido', 'reservado'], true)
+                            ) {
+                                continue;
+                            }
+
+                            // Un ticket impreso sin compra asociada puede reasignarse al comprador real.
+                            if (
+                                $ticket->estado === 'impreso' &&
+                                ! $tieneCompraAsignada
+                            ) {
+                                $ticket->estado = 'vendido';
+                                $ticket->user_id = $compra->user_id;
+                                $ticket->fecha_venta = $ticket->fecha_venta ?? $compra->created_at;
+                                $ticket->save();
+
+                                $ticketIds[] = $ticket->id;
+                                continue;
+                            }
+                        }
+
+                        $ticket->estado = 'vendido';
+                        $ticket->user_id = $compra->user_id;
+                        $ticket->fecha_venta = $ticket->fecha_venta ?? $compra->created_at;
+                        $ticket->save();
+
+                        $ticketIds[] = $ticket->id;
+                    }
+
+                    if (! empty($ticketIds)) {
+                        $compra->tickets()->syncWithoutDetaching($ticketIds);
+                    }
+
+                    if ($cantidadEsperada > count($ticketIds)) {
+                        $faltantes = $cantidadEsperada - count($ticketIds);
+                        $ticketsHuerfanos = \App\Models\Ticket::where('sorteo_id', $sorteoId)
+                            ->where('user_id', $compra->user_id)
+                            ->whereIn('estado', ['vendido', 'reservado'])
+                            ->whereDoesntHave('compras')
+                            ->whereNotIn('id', $ticketIds)
+                            ->orderByRaw('ABS(TIMESTAMPDIFF(SECOND, COALESCE(fecha_venta, created_at), ?))', [$compra->created_at])
+                            ->limit($faltantes)
+                            ->get(['id']);
+
+                        if ($ticketsHuerfanos->isNotEmpty()) {
+                            $compra->tickets()->syncWithoutDetaching($ticketsHuerfanos->pluck('id')->all());
+                        }
+                    }
+                }
+            });
+    }
+
     public function index(Request $request)
     {
         $periodo = $request->input('periodo', 'hoy');
@@ -348,8 +454,14 @@ class AdminDashboardController extends Controller
 
     public function ejecucion()
     {
+        $sorteosBase = \App\Models\Sorteo::whereIn('estado', ['activo', 'programado'])->get(['id']);
+
+        foreach ($sorteosBase as $sorteo) {
+            $this->reconcileApprovedTicketsForSorteo($sorteo->id);
+        }
+
         $sorteos = \App\Models\Sorteo::with(['premios'])->withCount(['tickets as valid_tickets_count' => function($query) {
-            $query->whereIn('estado', ['vendido', 'reservado']);
+            $query->whereRaw('LOWER(TRIM(estado)) IN (?, ?)', ['vendido', 'reservado']);
         }])->whereIn('estado', ['activo', 'programado'])->get()->map(function($sorteo) {
             return [
                 'id' => $sorteo->id,
@@ -412,7 +524,7 @@ class AdminDashboardController extends Controller
             });
 
         $query = \App\Models\Compra::with(['user', 'sorteo', 'tickets:id,numero'])
-            ->where('estado', '!=', 'pendiente')
+            ->where('estado', 'aprobado')
             ->orderBy('created_at', 'desc');
 
         if ($search) {
@@ -433,14 +545,9 @@ class AdminDashboardController extends Controller
             
         $comprasPaginated->getCollection()->transform(function ($c) {
             $detalles = $c->detalles;
-            // Si no tiene la key 'tickets' pero tiene 'numeros_asignados', la usamos
-            if (!isset($detalles['tickets']) && isset($detalles['numeros_asignados'])) {
-                $detalles['tickets'] = $detalles['numeros_asignados'];
-            }
-            // Si sigue sin tener tickets en detalles, intentamos sacar de la relación
-            if (!isset($detalles['tickets']) || empty($detalles['tickets'])) {
-                $detalles['tickets'] = $c->tickets->pluck('numero')->toArray();
-            }
+            $ticketsRelacion = $c->tickets->pluck('numero')->values()->all();
+            $ticketsDetalles = $detalles['tickets'] ?? $detalles['numeros_asignados'] ?? [];
+            $detalles['tickets'] = ! empty($ticketsRelacion) ? $ticketsRelacion : $ticketsDetalles;
 
             return [
                 'id'             => $c->id,
@@ -480,6 +587,9 @@ class AdminDashboardController extends Controller
         $limit = $perPage === 'todos' ? 999999 : (int) $perPage;
 
         $query = \App\Models\User::where('is_admin', false)
+            ->whereDoesntHave('roles', function ($q) {
+                $q->where('name', 'admin');
+            })
             ->where(function ($q) {
                 $q->whereNull('email')
                   ->orWhere('email', 'not like', '%@offline.local')
@@ -613,7 +723,7 @@ class AdminDashboardController extends Controller
     {
         $user = \App\Models\User::findOrFail($id);
         
-        if ($user->is_admin) {
+        if ($user->canAccessAdminPanel()) {
             return redirect()->back()->with('error', 'No puedes alterar el estado de un administrador.');
         }
 
@@ -646,7 +756,7 @@ class AdminDashboardController extends Controller
     {
         $user = \App\Models\User::findOrFail($id);
 
-        if ($user->is_admin) {
+        if ($user->canAccessAdminPanel()) {
             return redirect()->back()->with('error', 'No puedes eliminar un administrador.');
         }
 
@@ -716,10 +826,17 @@ class AdminDashboardController extends Controller
 
     public function apiTicketsStatus($sorteoId)
     {
+        $this->reconcileApprovedTicketsForSorteo((int) $sorteoId);
+
         $nums = \App\Models\Ticket::where('sorteo_id', $sorteoId)
-            ->whereIn('estado', ['vendido', 'reservado', 'impreso'])
+            ->whereRaw('LOWER(TRIM(estado)) IN (?, ?, ?)', ['vendido', 'reservado', 'impreso'])
             ->get(['numero', 'estado']);
-        return response()->json($nums->pluck('estado', 'numero')->toArray());
+
+        $normalized = $nums->mapWithKeys(function ($ticket) {
+            return [$ticket->numero => strtolower(trim((string) $ticket->estado))];
+        })->toArray();
+
+        return response()->json($normalized);
     }
 
     public function apiDrawTicket(Request $request)
@@ -727,8 +844,10 @@ class AdminDashboardController extends Controller
         $sorteoId = $request->input('sorteo_id');
         $drawnNumbers = $request->input('drawn_numbers', []);
 
+        $this->reconcileApprovedTicketsForSorteo((int) $sorteoId);
+
         $ticket = \App\Models\Ticket::where('sorteo_id', $sorteoId)
-            ->whereIn('estado', ['vendido', 'reservado'])
+            ->whereRaw('LOWER(TRIM(estado)) IN (?, ?)', ['vendido', 'reservado'])
             ->whereNotIn('numero', $drawnNumbers)
             ->with(['user:id,name', 'sorteo:id,nombre'])
             ->inRandomOrder()

@@ -23,4 +23,9 @@ class Ticket extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function compras()
+    {
+        return $this->belongsToMany(Compra::class, 'compra_ticket');
+    }
 }

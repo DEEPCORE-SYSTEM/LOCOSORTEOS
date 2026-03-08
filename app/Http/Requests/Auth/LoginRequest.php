@@ -41,14 +41,22 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $userOrPhone = $this->input('loginUser');
-        $field = strlen($userOrPhone) === 8 ? 'dni' : 'telefono';
+        $credentials = $this->credentials();
 
-        if (! Auth::attempt([$field => $userOrPhone, 'password' => $this->input('password')], $this->boolean('remember'))) {
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
                 'loginUser' => trans('auth.failed'),
+            ]);
+        }
+
+        if (Auth::user()?->estado === 'bloqueado') {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'loginUser' => 'Tu cuenta está bloqueada.',
             ]);
         }
 
@@ -84,5 +92,20 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('loginUser')).'|'.$this->ip());
+    }
+
+    private function credentials(): array
+    {
+        $userOrPhone = $this->input('loginUser');
+        $field = strlen($userOrPhone) === 8 ? 'dni' : 'telefono';
+
+        if (str_contains($userOrPhone, '@')) {
+            $field = 'email';
+        }
+
+        return [
+            $field => $userOrPhone,
+            'password' => $this->input('password'),
+        ];
     }
 }

@@ -34,7 +34,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        if ($request->user()->is_admin) {
+        if ($request->user()->canAccessAdminPanel()) {
             return redirect()->route('admin.dashboard');
         }
 

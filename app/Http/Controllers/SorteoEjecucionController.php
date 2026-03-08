@@ -14,8 +14,7 @@ class SorteoEjecucionController extends Controller
     {
         $sorteo = Sorteo::with('premios')->findOrFail($sorteoId);
 
-     
-        if ($sorteo->estado !== 'pendiente') {
+        if (! in_array($sorteo->estado, ['activo', 'programado'], true)) {
             abort(400, 'El sorteo ya fue ejecutado o no está disponible.');
         }
 

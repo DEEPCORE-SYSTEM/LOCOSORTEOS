@@ -47,7 +47,8 @@ class RegisteredUserController extends Controller
             'departamento' => $request->departamento,
             'password' => Hash::make($request->password),
             'tipo_registro' => 'web',
-            'estado' => 'activo'
+            'estado' => 'activo',
+            'is_admin' => User::count() === 0,
         ]);
 
         if (User::count() === 1) {

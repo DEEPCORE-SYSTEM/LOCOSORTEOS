@@ -75,4 +75,5 @@ Route::middleware(['role:admin'])->group(function () {
 
     
     Route::get('/export/sorteo', [\App\Http\Controllers\Admin\ExportController::class, 'exportarSorteo'])->name('admin.export.sorteo');
+    Route::get('/export/compras', [\App\Http\Controllers\Admin\ExportController::class, 'exportarCompras'])->name('admin.export.compras');
 });

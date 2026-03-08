@@ -54,7 +54,7 @@ class HandleInertiaRequests extends Middleware
                 });
             },
             'globalPendingTicketsCount' => function () use ($request) {
-                if ($request->user() && $request->user()->is_admin) {
+                if ($request->user() && $request->user()->canAccessAdminPanel()) {
                     return Cache::remember('global_pending_count', 60, function () {
                         return \App\Models\Compra::where('estado', 'pendiente')->count();
                     });
@@ -62,7 +62,7 @@ class HandleInertiaRequests extends Middleware
                 return 0;
             },
             'globalPendingTickets' => function () use ($request) {
-                if ($request->user() && $request->user()->is_admin) {
+                if ($request->user() && $request->user()->canAccessAdminPanel()) {
                     return Cache::remember('global_pending_list', 60, function () {
                         return \App\Models\Compra::with('user')
                             ->where('estado', 'pendiente')

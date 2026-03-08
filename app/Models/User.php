@@ -65,4 +65,9 @@ protected $fillable = [
     {
         return $this->hasMany(Compra::class);
     }
+
+    public function canAccessAdminPanel(): bool
+    {
+        return (bool) ($this->is_admin || $this->hasRole('admin'));
+    }
 }

@@ -53,7 +53,7 @@ class TicketValidationController extends Controller
         });
 
         $query = Compra::with(['user', 'sorteo', 'tickets:id,numero'])
-            ->where('estado', '!=', 'pendiente')
+            ->where('estado', 'aprobado')
             ->orderBy('created_at', 'desc');
 
         if ($search) {
@@ -73,12 +73,11 @@ class TicketValidationController extends Controller
             
         $comprasPaginated->getCollection()->transform(function ($compra) {
             $detalles = $compra->detalles;
-            if (!isset($detalles['tickets']) && isset($detalles['numeros_asignados'])) {
-                $detalles['tickets'] = $detalles['numeros_asignados'];
-            }
-            if (!isset($detalles['tickets']) || empty($detalles['tickets'])) {
-                $detalles['tickets'] = $compra->tickets->pluck('numero')->toArray();
-            }
+            $ticketsRelacion = $compra->tickets->pluck('numero')->values()->all();
+            $ticketsDetalles = $detalles['tickets'] ?? $detalles['numeros_asignados'] ?? [];
+
+            // La ruleta usa la tabla tickets; el historial debe reflejar esa fuente si existe.
+            $detalles['tickets'] = ! empty($ticketsRelacion) ? $ticketsRelacion : $ticketsDetalles;
 
             return [
                 'id' => $compra->id,
@@ -315,13 +314,17 @@ class TicketValidationController extends Controller
             } else {
                 for ($i = 0; $i < $request->cantidad; $i++) {
                     $numStr = $this->generarNumeroLibre($ticketsOcupados, $compra->sorteo_id);
-                    $ticket = Ticket::create([
-                        'sorteo_id' => $compra->sorteo_id,
-                        'numero' => $numStr, // ya formateado por generarNumeroLibre
-                        'estado' => 'vendido',
-                        'user_id' => $compra->user_id,
-                        'fecha_venta' => now()
-                    ]);
+                    $ticket = Ticket::updateOrCreate(
+                        [
+                            'sorteo_id' => $compra->sorteo_id,
+                            'numero' => $numStr,
+                        ],
+                        [
+                            'estado' => 'vendido',
+                            'user_id' => $compra->user_id,
+                            'fecha_venta' => now(),
+                        ]
+                    );
 
                     $numerosAsignados[] = $ticket->numero;
                     $ticketIds[]        = $ticket->id;
@@ -363,17 +366,15 @@ class TicketValidationController extends Controller
      */
     private function formatearNumeroTicket($numero, $sorteo): string
     {
-        // Si ya tiene formato alfanumérico no numérico puro, devolver tal cual
-        if (!is_numeric(str_replace(['-', ' ', '_'], '', $numero)) === false && preg_match('/[a-zA-Z]/', (string)$numero)) {
-            return (string)$numero;
+        if (preg_match('/[a-zA-Z]/', (string) $numero)) {
+            return trim((string) $numero);
         }
 
         $digitos = $sorteo?->digitos_ticket ?? 3;
         $prefijo = $sorteo?->prefijo_ticket ?? '';
 
-        // Extrae solo los dígitos si el número ya tiene prefijo pegado
-        $soloNumero = preg_replace('/[^0-9]/', '', (string)$numero);
-        $numeroPadded = str_pad((int)$soloNumero, $digitos, '0', STR_PAD_LEFT);
+        $soloNumero = preg_replace('/[^0-9]/', '', (string) $numero);
+        $numeroPadded = str_pad((int) $soloNumero, $digitos, '0', STR_PAD_LEFT);
 
         return $prefijo . $numeroPadded;
     }

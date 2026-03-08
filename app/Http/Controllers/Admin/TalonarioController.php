@@ -46,13 +46,13 @@ class TalonarioController extends Controller
 
     private function formatearNumeroTicket($numero, $sorteo): string
     {
-        if (!is_numeric(str_replace(['-', ' ', '_'], '', $numero)) === false && preg_match('/[a-zA-Z]/', (string)$numero)) {
-            return (string)$numero;
+        if (preg_match('/[a-zA-Z]/', (string) $numero)) {
+            return trim((string) $numero);
         }
         $digitos = $sorteo?->digitos_ticket ?? 3;
         $prefijo = $sorteo?->prefijo_ticket ?? '';
-        $soloNumero = preg_replace('/[^0-9]/', '', (string)$numero);
-        $numeroPadded = str_pad((int)$soloNumero, $digitos, '0', STR_PAD_LEFT);
+        $soloNumero = preg_replace('/[^0-9]/', '', (string) $numero);
+        $numeroPadded = str_pad((int) $soloNumero, $digitos, '0', STR_PAD_LEFT);
         return $prefijo . $numeroPadded;
     }
 }

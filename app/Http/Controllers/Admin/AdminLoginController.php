@@ -37,13 +37,11 @@ class AdminLoginController extends Controller
 
         if (Auth::attempt([$field => $userOrPhone, 'password' => $request->input('password')], $request->boolean('remember'))) {
             $request->session()->regenerate();
-            
-            
-            if (Auth::user()->hasRole('admin')) {
+
+            if (Auth::user()->canAccessAdminPanel()) {
                 return redirect()->intended(route('admin.dashboard', absolute: false));
             }
 
-            
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

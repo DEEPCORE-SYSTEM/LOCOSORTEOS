@@ -21,7 +21,7 @@ class RedirectIfAuthenticated
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
                 // Si ya está autenticado e intenta acceder a login, redirigir según rol
-                if (Auth::user()->is_admin) {
+                if (Auth::user()->canAccessAdminPanel()) {
                     return redirect()->route('admin.dashboard');
                 }
                 return redirect()->route('dashboard');

@@ -19,8 +19,7 @@ class EnsureUserIsAdmin
             return redirect()->route('admin.login');
         }
 
-        if ($role === 'admin' && !auth()->user()->is_admin) {
-            
+        if ($role === 'admin' && ! auth()->user()->canAccessAdminPanel()) {
             return redirect()->route('dashboard')->with('error', 'No tienes permisos de administrador.');
         }
 
