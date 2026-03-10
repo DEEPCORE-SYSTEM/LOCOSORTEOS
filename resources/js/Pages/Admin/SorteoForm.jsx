@@ -26,8 +26,12 @@ export default function SorteoForm({ sorteo }) {
     estado: sorteo?.estado || 'borrador',
     prefijo_ticket: sorteo?.prefijo_ticket || '',
     digitos_ticket: sorteo?.digitos_ticket || 3,
-    premios: sorteo?.premios?.length > 0 ? sorteo.premios : [
-      { id: Date.now(), nombre: 'Vehículo', descripcion: '', imagen: '', orden: 1 }
+    premios: sorteo?.premios?.length > 0 ? sorteo.premios.map((premio, idx) => ({
+      ...premio,
+      cantidad: Math.max(1, parseInt(premio.cantidad, 10) || 1),
+      orden: premio.orden || (idx + 1),
+    })) : [
+      { id: Date.now(), nombre: 'Vehículo', cantidad: 1, descripcion: '', imagen: '', orden: 1 }
     ],
   });
 
@@ -63,7 +67,7 @@ export default function SorteoForm({ sorteo }) {
   const addPremioRow = () => {
     setData('premios', [
       ...data.premios,
-      { id: Date.now(), nombre: '', descripcion: '', imagen: '', orden: data.premios.length + 1 }
+      { id: Date.now(), nombre: 'Vehículo', cantidad: 1, descripcion: '', imagen: '', orden: data.premios.length + 1 }
     ]);
   };
 
@@ -351,8 +355,8 @@ export default function SorteoForm({ sorteo }) {
                   </div>
 
                   {/* Name / Category */}
-                  <select 
-                    value={premio.nombre || 'Vehículo'} 
+                  <select
+                    value={premio.nombre || 'Vehículo'}
                     onChange={e => updatePremio(index, 'nombre', e.target.value)}
                     className="w-32 py-2.5 px-3 border border-slate-200 bg-slate-50 rounded-lg focus:outline-none focus:border-emerald-500 text-sm font-bold text-slate-700"
                   >
@@ -362,6 +366,21 @@ export default function SorteoForm({ sorteo }) {
                     <option value="Viaje">Viaje</option>
                     <option value="Otro">Otro Premio</option>
                   </select>
+
+                  {/* Quantity */}
+                  <div className="w-full md:w-28">
+                    <input
+                      type="number"
+                      min="1"
+                      value={premio.cantidad ?? 1}
+                      onChange={e => updatePremio(index, 'cantidad', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      placeholder="Cant."
+                      className="w-full py-2.5 px-3 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-sm font-bold text-slate-700 text-center"
+                    />
+                    {errors[`premios.${index}.cantidad`] && (
+                      <p className="text-red-500 text-[10px] mt-1 text-center">{errors[`premios.${index}.cantidad`]}</p>
+                    )}
+                  </div>
 
                   {/* Description */}
                   <input 

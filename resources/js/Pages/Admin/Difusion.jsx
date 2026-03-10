@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
   Plus, Settings, Globe, Link2, Phone, Facebook,
   MessageCircle, X, Send, Megaphone, BellRing, CheckCircle,
@@ -72,7 +72,7 @@ export default function Difusion({ broadcastMessagesPaginated, filters = {} }) {
   const { data, setData, post, processing, reset, errors } = useForm({
     title: '',
     content: '',
-    type: 'Alerta (Rojo)',
+    type: 'alert',
   });
 
   const handleCreateMessage = (e) => {
@@ -111,9 +111,9 @@ export default function Difusion({ broadcastMessagesPaginated, filters = {} }) {
   };
 
   const typeConfig = {
-    'Alerta (Rojo)': { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500', label: 'Alerta' },
-    'Noticia (Verde)': { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Noticia' },
-    'Promo (Amarillo)': { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-400', label: 'Promo' },
+    alert: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500', label: 'Alerta' },
+    news: { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Noticia' },
+    promo: { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-400', label: 'Promo' },
   };
 
   const configItems = [
@@ -169,12 +169,12 @@ export default function Difusion({ broadcastMessagesPaginated, filters = {} }) {
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Tipo de Aviso</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(typeConfig).map(([val, cfg]) => (
+                  {Object.entries(typeConfig).map(([value, cfg]) => (
                     <button
-                      key={val} type="button"
-                      onClick={() => setData('type', val)}
+                      key={value} type="button"
+                      onClick={() => setData('type', value)}
                       className={`relative py-2.5 px-3 rounded-xl border-2 text-xs font-bold transition-all text-center ${
-                        data.type === val
+                        data.type === value
                           ? `${cfg.bg} ${cfg.text} border-current`
                           : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'
                       }`}
@@ -184,6 +184,7 @@ export default function Difusion({ broadcastMessagesPaginated, filters = {} }) {
                     </button>
                   ))}
                 </div>
+                {errors.type && <p className="text-red-500 text-xs mt-2">{errors.type}</p>}
               </div>
 
               {/* Título */}
@@ -238,7 +239,7 @@ export default function Difusion({ broadcastMessagesPaginated, filters = {} }) {
                 </div>
                 <div className="space-y-2">
                   {broadcastMessagesData.map(msg => {
-                    const cfg = typeConfig[msg.type] || typeConfig['Noticia (Verde)'];
+                    const cfg = typeConfig[msg.type] || typeConfig.news;
                     return (
                       <div key={msg.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
                         <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${cfg.dot}`}></span>

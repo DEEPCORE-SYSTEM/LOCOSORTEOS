@@ -203,6 +203,11 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
                         <img src={premio.imagen} alt={premio.nombre} className="w-full h-20 object-cover rounded-lg mb-2" />
                       )}
                       <p className="font-black text-slate-800 dark:text-slate-200 text-sm">{premio.nombre}</p>
+                      {(parseInt(premio.cantidad, 10) || 1) > 1 && (
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-black mt-0.5">
+                          x{parseInt(premio.cantidad, 10)}
+                        </p>
+                      )}
                       {premio.descripcion && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{premio.descripcion}</p>}
                     </div>
                   ))}

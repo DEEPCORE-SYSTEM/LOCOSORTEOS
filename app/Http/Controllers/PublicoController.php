@@ -78,7 +78,7 @@ class PublicoController extends Controller
      */
     private function getSorteoActivo(bool $failOrNull = false): ?Sorteo
     {
-        $query = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion,imagen,orden'])
+        $query = Sorteo::with(['premios:id,sorteo_id,nombre,cantidad,tipo,descripcion,imagen,orden'])
             ->where('estado', 'activo');
 
         return $failOrNull ? $query->firstOrFail() : $query->first();
@@ -161,7 +161,7 @@ class PublicoController extends Controller
      */
     public function welcome()
     {
-        $sorteos = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion,imagen'])
+        $sorteos = Sorteo::with(['premios:id,sorteo_id,nombre,cantidad,tipo,descripcion,imagen'])
             ->select('id', 'nombre', 'tipo', 'imagen_hero', 'descripcion', 'fecha_fin', 'precio_ticket', 'estado', 'cantidad_tickets')
             ->where('estado', 'activo')
             ->orderBy('fecha_fin', 'asc')
@@ -258,7 +258,7 @@ class PublicoController extends Controller
         $sorteoIdRaw = $request->query('sorteo_id');
         $sorteoId = is_array($sorteoIdRaw) ? (int) ($sorteoIdRaw[0] ?? 0) : (int) $sorteoIdRaw;
 
-        $querySorteos = Sorteo::with(['premios:id,sorteo_id,nombre,descripcion,imagen,orden'])
+        $querySorteos = Sorteo::with(['premios:id,sorteo_id,nombre,cantidad,tipo,descripcion,imagen,orden'])
             ->where('estado', 'activo');
 
         $sorteosActivos = $querySorteos->get();
