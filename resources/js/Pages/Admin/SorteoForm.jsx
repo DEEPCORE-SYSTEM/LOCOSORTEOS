@@ -6,6 +6,13 @@ import axios from 'axios';
 
 export default function SorteoForm({ sorteo }) {
   const isEditing = !!sorteo;
+
+  const resolveImageUrl = (value) => {
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value)) return value;
+    const normalized = String(value).replace(/^\/+/, '').replace(/^storage\//, '');
+    return `/storage/${normalized}`;
+  };
   
   const formatDateForInput = (dateString) => {
     if (!dateString) return '';
@@ -21,6 +28,7 @@ export default function SorteoForm({ sorteo }) {
     descripcion: sorteo?.descripcion || '',
     fecha_inicio: formatDateForInput(sorteo?.fecha_inicio) || formatDateForInput(new Date().toISOString()),
     fecha_fin: formatDateForInput(sorteo?.fecha_fin) || '',
+    fecha_sorteo: formatDateForInput(sorteo?.fecha_sorteo) || formatDateForInput(sorteo?.fecha_fin) || '',
     cantidad_tickets: sorteo?.cantidad_tickets || 10000,
     precio_ticket: sorteo?.precio_ticket || 40,
     estado: sorteo?.estado || 'borrador',
@@ -55,8 +63,9 @@ export default function SorteoForm({ sorteo }) {
       const { data: res } = await axios.post('/admin/upload-image', form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (extraHandler) extraHandler(res.url);
-      else setData(fieldName, res.url);
+      const storedValue = res.path || res.url;
+      if (extraHandler) extraHandler(storedValue);
+      else setData(fieldName, storedValue);
     } catch (err) {
       alert('Error al subir la imagen. Verifica el formato y tamaño (máx 10MB).');
     } finally {
@@ -155,7 +164,7 @@ export default function SorteoForm({ sorteo }) {
             <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2 mb-4">
               <span className="text-emerald-600 bg-emerald-50 rounded-full w-6 h-6 flex items-center justify-center">2</span> Parámetros y Disponibilidad
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
               
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Precio Fijo del Ticket (S/)</label>
@@ -172,14 +181,31 @@ export default function SorteoForm({ sorteo }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">Fecha y Hora de Cierre</label>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Fecha y Hora de Cierre de Compra</label>
                 <input 
                   type="datetime-local" 
                   value={data.fecha_fin || ''}
                   onChange={e => setData('fecha_fin', e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-700 font-medium text-sm bg-white" 
                 />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Este valor define hasta qué momento se puede comprar. Si el sorteo es el día 28 y quieres cerrar ventas un día antes, configura 27 23:59.
+                </p>
                 {errors.fecha_fin && <p className="text-red-500 text-xs mt-1">{errors.fecha_fin}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Fecha y Hora del Sorteo</label>
+                <input
+                  type="datetime-local"
+                  value={data.fecha_sorteo || ''}
+                  onChange={e => setData('fecha_sorteo', e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:outline-none text-slate-700 font-medium text-sm bg-white"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Esta es la fecha que se mostrará al cliente como día oficial del sorteo.
+                </p>
+                {errors.fecha_sorteo && <p className="text-red-500 text-xs mt-1">{errors.fecha_sorteo}</p>}
               </div>
 
               <div>
@@ -265,7 +291,7 @@ export default function SorteoForm({ sorteo }) {
               <div className="border border-slate-200 hover:border-emerald-500 transition-colors rounded-xl p-5 flex flex-col items-center justify-center text-center bg-slate-50 relative overflow-hidden group min-h-[140px]">
                 {data.imagen_hero ? (
                   <>
-                    <img src={data.imagen_hero} alt="hero" className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" />
+                    <img src={resolveImageUrl(data.imagen_hero)} alt="hero" className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" />
                     <div className="z-10 relative">
                       <p className="text-xs font-bold text-emerald-700 mb-2">✓ Imagen subida</p>
                       <button type="button" onClick={() => setData('imagen_hero', '')} className="text-[10px] text-red-500 hover:text-red-700 font-bold">Eliminar</button>
@@ -293,7 +319,7 @@ export default function SorteoForm({ sorteo }) {
               <div className="border border-slate-200 hover:border-emerald-500 transition-colors rounded-xl p-5 flex flex-col items-center justify-center text-center bg-slate-50 relative overflow-hidden group min-h-[140px]">
                 {data.banner_promocional ? (
                   <>
-                    <img src={data.banner_promocional} alt="banner" className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" />
+                    <img src={resolveImageUrl(data.banner_promocional)} alt="banner" className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" />
                     <div className="z-10 relative">
                       <p className="text-xs font-bold text-emerald-700 mb-2">✓ Banner subido</p>
                       <button type="button" onClick={() => setData('banner_promocional', '')} className="text-[10px] text-red-500 hover:text-red-700 font-bold">Eliminar</button>
@@ -335,13 +361,13 @@ export default function SorteoForm({ sorteo }) {
                     {uploadingImg[`premio_${index}`] ? (
                       <span className="text-[8px] text-slate-400 animate-pulse font-bold text-center px-1">Subiendo...</span>
                     ) : premio.imagen ? (
-                      <img src={premio.imagen} alt="premio" className="w-full h-full object-cover" />
+                      <img src={resolveImageUrl(premio.imagen)} alt="premio" className="w-full h-full object-cover" />
                     ) : (
                       <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
                         <Upload className="w-4 h-4 text-slate-400 mb-0.5" />
                         <span className="text-[8px] text-slate-400 font-bold uppercase text-center leading-tight">Subir<br/>Foto</span>
                         <input type="file" accept="image/*" className="hidden"
-                          onChange={e => uploadFile(e.target.files[0], `premio_${index}`, (url) => updatePremio(index, 'imagen', url))} />
+                          onChange={e => uploadFile(e.target.files[0], `premio_${index}`, (path) => updatePremio(index, 'imagen', path))} />
                       </label>
                     )}
                     {premio.imagen && (

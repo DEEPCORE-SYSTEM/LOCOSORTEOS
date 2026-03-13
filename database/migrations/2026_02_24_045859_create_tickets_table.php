@@ -17,23 +17,25 @@ public function up(): void
         
         $table->foreignId('sorteo_id')->constrained()->onDelete('cascade');
 
-        
-        $table->string('numero', 10);
+        $table->foreignId('participant_id')->nullable()->constrained('participantes')->nullOnDelete();
 
         
-        $table->enum('estado', ['disponible', 'reservado', 'vendido'])
+        $table->string('numero', 50);
+
+        
+        $table->enum('estado', ['disponible', 'reservado', 'vendido', 'impreso'])
               ->default('disponible');
 
-        
-        $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-
-        
         $table->dateTime('fecha_venta')->nullable();
 
         $table->timestamps();
 
-        
         $table->unique(['sorteo_id', 'numero']);
+
+        $table->index('estado');
+        $table->index('created_at');
+        $table->index(['estado', 'created_at']);
+        $table->index(['sorteo_id', 'estado']);
     });
 }
 

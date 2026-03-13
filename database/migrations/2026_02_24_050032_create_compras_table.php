@@ -14,10 +14,8 @@ public function up(): void
     Schema::create('compras', function (Blueprint $table) {
         $table->id();
 
-        
-        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        $table->foreignId('participant_id')->constrained('participantes')->onDelete('cascade');
 
-        
         $table->foreignId('sorteo_id')->constrained()->onDelete('cascade');
 
         
@@ -26,8 +24,14 @@ public function up(): void
         
         $table->enum('metodo_pago', ['efectivo', 'yape', 'plin', 'transferencia', 'web']);
 
+        $table->enum('estado', ['pendiente', 'aprobado', 'rechazado'])->default('pendiente');
+
         
         $table->string('comprobante')->nullable();
+
+        $table->json('detalles')->nullable();
+
+        $table->string('motivo_rechazo')->nullable();
 
         
         $table->foreignId('registrado_por')->nullable()->constrained('users')->nullOnDelete();

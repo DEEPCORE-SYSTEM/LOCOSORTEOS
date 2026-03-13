@@ -16,9 +16,12 @@ public function up(): void
 
         $table->foreignId('premio_id')->constrained()->onDelete('cascade');
         $table->foreignId('ticket_id')->constrained()->onDelete('cascade');
-        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        $table->foreignId('sorteo_id')->nullable()->constrained()->nullOnDelete();
 
         $table->dateTime('fecha_sorteo');
+        $table->enum('tipo', ['manual', 'automatico'])->default('automatico');
+        $table->string('imagen')->nullable();
+        $table->boolean('destacado')->default(false);
 
         $table->timestamps();
     });

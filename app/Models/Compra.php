@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Compra extends Model
 {
     protected $fillable = [
-        'user_id',
+        'participant_id',
         'sorteo_id',
         'total',
         'metodo_pago',
@@ -27,9 +27,9 @@ class Compra extends Model
         return $this->belongsToMany(Ticket::class, 'compra_ticket');
     }
 
-    public function user()
+    public function participante()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(Participante::class, 'participant_id');
     }
 
     public function sorteo()

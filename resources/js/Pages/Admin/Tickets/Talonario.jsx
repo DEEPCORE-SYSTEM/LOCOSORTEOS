@@ -37,9 +37,8 @@ export default function Talonario({
     dni: '',
     telefono: '',
     departamento: '',
-    provincia_distrito: '',
-    direccion: '',
-    medio_pago_fisico: 'Cobro en Efectivo (Caja Oficina)',
+    medio_pago_fisico: 'efectivo',
+    comprobante: '',
     quien_realizo: '',
     total: 0
   });
@@ -56,6 +55,14 @@ export default function Talonario({
     setData('total', cant * precio);
   }, [data.numeros_text, data.cantidad, data.modo_seleccion, activeSorteo]);
 
+  const requiereComprobante = data.medio_pago_fisico !== 'efectivo';
+
+  useEffect(() => {
+    if (data.medio_pago_fisico === 'efectivo' && data.comprobante) {
+      setData('comprobante', '');
+    }
+  }, [data.medio_pago_fisico]);
+
 
   const consultarDni = async (dni = data.dni) => {
     if (!dni || dni.length !== 8) return;
@@ -67,9 +74,7 @@ export default function Talonario({
                 ...d, 
                 nombre: response.data.nombre,
                 telefono: response.data.telefono || d.telefono,
-                departamento: response.data.departamento || d.departamento,
-                provincia_distrito: response.data.provincia_distrito || d.provincia_distrito,
-                direccion: response.data.direccion || d.direccion
+                departamento: response.data.departamento || d.departamento
             }));
         }
     } catch (error) {
@@ -376,15 +381,6 @@ export default function Talonario({
                         {/* More options... */}
                       </select>
                     </div>
-                    <div className="lg:col-span-2">
-                       <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Provincia / Distrito</label>
-                       <input type="text" value={data.provincia_distrito} onChange={e => setData('provincia_distrito', e.target.value)} placeholder="Ej: Chanchamayo / La Merced" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 focus:border-emerald-500 focus:outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm" />
-                    </div>
-                    
-                    <div className="md:col-span-2 lg:col-span-3">
-                       <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Dirección Exacta</label>
-                       <input type="text" value={data.direccion} onChange={e => setData('direccion', e.target.value)} placeholder="Ej: Av. Principal 123" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 focus:border-emerald-500 focus:outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm" />
-                    </div>
                   </div>
                 </div>
 
@@ -397,10 +393,10 @@ export default function Talonario({
                     <div>
                       <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Medio de Pago Físico *</label>
                       <select required value={data.medio_pago_fisico} onChange={e => setData('medio_pago_fisico', e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 focus:border-emerald-500 focus:outline-none text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
-                        <option value="Cobro en Efectivo (Caja Oficina)">Cobro en Efectivo (Caja Oficina)</option>
-                        <option value="Efectivo (Entregado por Vendedor)">Efectivo (Entregado por Vendedor)</option>
-                        <option value="Yape (Hacia el vendedor)">Yape (Hacia el vendedor)</option>
-                        <option value="Plin (Hacia el vendedor)">Plin (Hacia el vendedor)</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="yape">Yape</option>
+                        <option value="plin">Plin</option>
+                        <option value="transferencia">Transferencia</option>
                       </select>
                     </div>
                     <div>
@@ -408,6 +404,18 @@ export default function Talonario({
                       <input type="text" required value={data.quien_realizo} onChange={e => setData('quien_realizo', e.target.value)} placeholder="Ej: Oficina Central, o Juan (Vendedor)" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 focus:border-emerald-500 focus:outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm" />
                       {errors.quien_realizo && <span className="text-xs text-red-500 block mt-1">{errors.quien_realizo}</span>}
                     </div>
+                    {requiereComprobante ? (
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Comprobante / N° de operación *</label>
+                        <input type="text" required value={data.comprobante} onChange={e => setData('comprobante', e.target.value)} placeholder="Ej: OP-123456" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 focus:border-emerald-500 focus:outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm" />
+                        {errors.comprobante && <span className="text-xs text-red-500 block mt-1">{errors.comprobante}</span>}
+                      </div>
+                    ) : (
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Importe (Efectivo)</label>
+                        <input type="text" readOnly value={`S/ ${Number(data.total || 0).toFixed(2)}`} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-sm font-black" />
+                      </div>
+                    )}
                   </div>
                 </div>
                 

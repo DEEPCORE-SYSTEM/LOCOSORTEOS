@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Compra;
 use App\Models\Ticket;
+use App\Models\Participante;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TicketValidationController extends Controller
 {
@@ -18,7 +20,7 @@ class TicketValidationController extends Controller
         $limit = $perPage === 'todos' ? 999999 : (int) $perPage;
 
         
-        $pendientesQuery = Compra::with(['user', 'sorteo'])
+        $pendientesQuery = Compra::with(['sorteo', 'participante'])
             ->where('estado', 'pendiente')
             ->orderBy('created_at', 'desc');
 
@@ -26,10 +28,12 @@ class TicketValidationController extends Controller
             $pendientesQuery->where(function($q) use ($search) {
                 $cleanSearch = str_ireplace('COMPRA-', '', $search);
 
-                $q->whereHas('user', function($q2) use ($search) {
+                $q->whereHas('participante', function ($q2) use ($search) {
                     $q2->where('name', 'like', "%{$search}%")
                        ->orWhere('dni', 'like', "%{$search}%");
                 })
+                ->orWhere('detalles->buyer->name', 'like', "%{$search}%")
+                ->orWhere('detalles->buyer->dni', 'like', "%{$search}%")
                 ->orWhere('id', 'like', "%{$cleanSearch}%")
                 ->orWhereJsonContains('detalles->numeros_manuales', $search);
             });
@@ -38,10 +42,18 @@ class TicketValidationController extends Controller
         $pendientesPaginated = $pendientesQuery->paginate($limit, ['*'], 'pend_page')->withQueryString();
 
         $pendientesPaginated->getCollection()->transform(function ($compra) {
+            $buyer = [
+                'name' => $compra->participante?->name,
+                'dni' => $compra->participante?->dni,
+            ];
+            if (! $buyer['name'] || ! $buyer['dni']) {
+                $buyer = $compra->detalles['buyer'] ?? [];
+            }
+
             return [
                 'id' => $compra->id,
-                'user' => $compra->user?->name ?? $compra->nombre ?? '—',
-                'user_dni' => $compra->user?->dni ?? $compra->dni ?? '—',
+                'user' => $buyer['name'] ?? '—',
+                'user_dni' => $buyer['dni'] ?? '—',
                 'sorteo' => $compra->sorteo?->nombre ?? '—',
                 'total' => $compra->total,
                 'metodo_pago' => strtoupper($compra->metodo_pago ?? '—'),
@@ -52,7 +64,7 @@ class TicketValidationController extends Controller
             ];
         });
 
-        $query = Compra::with(['user', 'sorteo', 'tickets:id,numero'])
+        $query = Compra::with(['sorteo', 'tickets:id,numero', 'participante'])
             ->where('estado', 'aprobado')
             ->orderBy('created_at', 'desc');
 
@@ -60,10 +72,12 @@ class TicketValidationController extends Controller
             $query->where(function($q) use ($search) {
                 $cleanSearch = str_ireplace('COMPRA-', '', $search);
 
-                $q->whereHas('user', function($q2) use ($search) {
+                $q->whereHas('participante', function ($q2) use ($search) {
                     $q2->where('name', 'like', "%{$search}%")
                        ->orWhere('dni', 'like', "%{$search}%");
                 })
+                ->orWhere('detalles->buyer->name', 'like', "%{$search}%")
+                ->orWhere('detalles->buyer->dni', 'like', "%{$search}%")
                 ->orWhere('id', 'like', "%{$cleanSearch}%")
                 ->orWhereJsonContains('detalles->numeros_manuales', $search);
             });
@@ -79,10 +93,18 @@ class TicketValidationController extends Controller
             // La ruleta usa la tabla tickets; el historial debe reflejar esa fuente si existe.
             $detalles['tickets'] = ! empty($ticketsRelacion) ? $ticketsRelacion : $ticketsDetalles;
 
+            $buyer = [
+                'name' => $compra->participante?->name,
+                'dni' => $compra->participante?->dni,
+            ];
+            if (! $buyer['name'] || ! $buyer['dni']) {
+                $buyer = $detalles['buyer'] ?? [];
+            }
+
             return [
                 'id' => $compra->id,
-                'user' => $compra->user?->name ?? $compra->nombre ?? '—',
-                'user_dni' => $compra->user?->dni ?? $compra->dni ?? '—',
+                'user' => $buyer['name'] ?? '—',
+                'user_dni' => $buyer['dni'] ?? '—',
                 'sorteo' => $compra->sorteo?->nombre ?? '—',
                 'total' => $compra->total,
                 'metodo_pago' => strtoupper($compra->metodo_pago ?? '—'),
@@ -145,7 +167,7 @@ class TicketValidationController extends Controller
 
                     $ticket->update([
                         'estado' => 'vendido',
-                        'user_id' => $compra->user_id,
+                        'participant_id' => $compra->participant_id,
                         'fecha_venta' => now(),
                     ]);
 
@@ -166,7 +188,7 @@ class TicketValidationController extends Controller
 
                     $ticket->update([
                         'estado' => 'vendido',
-                        'user_id' => $compra->user_id,
+                        'participant_id' => $compra->participant_id,
                         'fecha_venta' => now(),
                     ]);
 
@@ -220,9 +242,8 @@ class TicketValidationController extends Controller
             'nombre' => 'required|string|max:255',
             'telefono' => 'required|string|max:20',
             'departamento' => 'nullable|string|max:255',
-            'provincia_distrito' => 'nullable|string|max:255',
-            'direccion' => 'nullable|string|max:255',
-            'medio_pago_fisico' => 'required|string|max:255',
+            'medio_pago_fisico' => 'required|string|max:50',
+            'comprobante' => 'nullable|string|max:255',
             'quien_realizo' => 'required|string|max:255',
             'cantidad' => 'required|integer|min:1',
             'total' => 'required|numeric|min:0',
@@ -232,34 +253,45 @@ class TicketValidationController extends Controller
         ]);
 
         DB::transaction(function () use ($request) {
-            
-            $user = \App\Models\User::firstOrCreate(
+            $metodoPago = $this->normalizeMetodoPago($request->medio_pago_fisico);
+            if (! $metodoPago) {
+                throw ValidationException::withMessages([
+                    'medio_pago_fisico' => 'Medio de pago no válido.',
+                ]);
+            }
+
+            $comprobante = trim((string) ($request->comprobante ?? ''));
+            if ($metodoPago !== 'efectivo' && $comprobante === '') {
+                throw ValidationException::withMessages([
+                    'comprobante' => 'El comprobante es obligatorio para pagos no efectivos.',
+                ]);
+            }
+
+            $participante = Participante::firstOrCreate(
                 ['dni' => $request->dni],
                 [
                     'name' => $request->nombre,
-                    'email' => $request->dni . '@offline.local', 
-                    'password' => bcrypt($request->dni), 
                     'telefono' => $request->telefono,
-                    'is_admin' => false
+                    'departamento' => $request->departamento,
+                    'estado' => 'activo',
                 ]
             );
 
-            
-            
-            if ($user->telefono == '000000000' || $user->telefono == '-') {
-                $user->update(['telefono' => $request->telefono, 'name' => $request->nombre]);
-            }
+            $participante->update([
+                'name' => $request->nombre,
+                'telefono' => $request->telefono,
+                'departamento' => $request->departamento,
+            ]);
 
-            
             $modo = $request->modo_seleccion ?? 'random';
             $numerosManuales = $request->numeros_manuales ?? [];
 
             $compra = Compra::create([
-                'user_id' => $user->id,
+                'participant_id' => $participante->id,
                 'sorteo_id' => $request->sorteo_id,
                 'total' => $request->total,
-                'metodo_pago' => $request->medio_pago_fisico,
-                'comprobante' => null,
+                'metodo_pago' => $metodoPago,
+                'comprobante' => $metodoPago === 'efectivo' ? null : $comprobante,
                 'estado' => 'aprobado', 
                 'registrado_por' => auth()->id(), 
                 'detalles' => [
@@ -267,9 +299,15 @@ class TicketValidationController extends Controller
                     'modo_seleccion' => $modo,
                     'numeros_manuales' => $numerosManuales,
                     'tipo_venta' => 'Talonario Físico',
-                    'departamento' => $request->departamento,
-                    'provincia_distrito' => $request->provincia_distrito,
-                    'direccion' => $request->direccion,
+                    'buyer' => [
+                        'dni' => $request->dni,
+                        'name' => $request->nombre,
+                        'telefono' => $request->telefono,
+                        'departamento' => $request->departamento,
+                    ],
+                    'pago' => $metodoPago === 'efectivo'
+                        ? ['metodo' => 'efectivo', 'monto' => (float) $request->total]
+                        : ['metodo' => $metodoPago, 'comprobante' => $comprobante],
                     'quien_realizo' => $request->quien_realizo,
                     'tickets' => [], // Inicializar para llenar abajo
                 ]
@@ -303,7 +341,7 @@ class TicketValidationController extends Controller
                         ],
                         [
                             'estado' => 'vendido',
-                            'user_id' => $compra->user_id,
+                            'participant_id' => $participante->id,
                             'fecha_venta' => now()
                         ]
                     );
@@ -321,7 +359,7 @@ class TicketValidationController extends Controller
                         ],
                         [
                             'estado' => 'vendido',
-                            'user_id' => $compra->user_id,
+                            'participant_id' => $participante->id,
                             'fecha_venta' => now(),
                         ]
                     );
@@ -379,6 +417,29 @@ class TicketValidationController extends Controller
         return $prefijo . $numeroPadded;
     }
 
+    private function normalizeMetodoPago(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $map = [
+            'efectivo' => 'efectivo',
+            'yape' => 'yape',
+            'plin' => 'plin',
+            'transferencia' => 'transferencia',
+            'web' => 'web',
+            'Cobro en Efectivo (Caja Oficina)' => 'efectivo',
+            'Efectivo (Entregado por Vendedor)' => 'efectivo',
+            'Yape (Hacia el vendedor)' => 'yape',
+            'Plin (Hacia el vendedor)' => 'plin',
+            'Transferencia (Hacia el vendedor)' => 'transferencia',
+        ];
+
+        return $map[$value] ?? null;
+    }
+
     public function exportPdf(Request $request)
     {
         $request->validate([
@@ -421,19 +482,6 @@ class TicketValidationController extends Controller
         }
 
         DB::transaction(function () use ($sorteo, $numerosRequeridos, $request) {
-            $adminUserId = auth()->id() ?? 1; 
-            
-            $userOffline = \App\Models\User::firstOrCreate(
-                ['email' => 'impresion_' . $sorteo->id . '@sorteos.local'],
-                [
-                    'name' => 'Lote Impreso ' . ($request->vendedor ? '(' . $request->vendedor . ')' : ''),
-                    'dni' => str_pad($sorteo->id, 8, '0', STR_PAD_LEFT), 
-                    'password' => bcrypt('impresion_lote'),
-                    'telefono' => '000000000',
-                    'is_admin' => false
-                ]
-            );
-
             // Fetch exactly which ones already exist in the DB (like 'disponible' ones)
             $existentes = Ticket::where('sorteo_id', $sorteo->id)
                 ->whereIn('numero', $numerosRequeridos)
@@ -448,7 +496,6 @@ class TicketValidationController extends Controller
                     ->whereIn('numero', $existentes)
                     ->update([
                         'estado' => 'impreso',
-                        'user_id' => $userOffline->id,
                         'fecha_venta' => $now,
                         'updated_at' => $now
                     ]);
@@ -462,7 +509,6 @@ class TicketValidationController extends Controller
                         'sorteo_id' => $sorteo->id,
                         'numero' => $numStr,
                         'estado' => 'impreso',
-                        'user_id' => $userOffline->id,
                         'fecha_venta' => $now,
                         'created_at' => $now,
                         'updated_at' => $now
@@ -530,15 +576,22 @@ class TicketValidationController extends Controller
             'metodo_pago' => 'required|string|max:255',
         ]);
 
-        if ($compra->user) {
-            $compra->user->update([
+        $detalles = $compra->detalles ?? [];
+        $buyer = $detalles['buyer'] ?? [];
+        $buyer['name'] = $request->user;
+        $buyer['dni'] = $request->user_dni;
+        $detalles['buyer'] = $buyer;
+
+        if ($compra->participante) {
+            $compra->participante->update([
                 'name' => $request->user,
-                'dni' => $request->user_dni
+                'dni' => $request->user_dni,
             ]);
         }
 
         $compra->update([
             'metodo_pago' => $request->metodo_pago,
+            'detalles' => $detalles,
         ]);
 
         return redirect()->back()->with('success', 'Venta actualizada correctamente.');
@@ -559,27 +612,12 @@ class TicketValidationController extends Controller
                     ->lockForUpdate()
                     ->update([
                         'estado' => 'disponible',
-                        'user_id' => null,
+                        'participant_id' => null,
                         'fecha_venta' => null,
                         'updated_at' => now(),
                     ]);
 
                 $compra->tickets()->detach();
-            } else {
-                // Fallback para compras historicas sin relacion en pivote.
-                Ticket::where('sorteo_id', $compra->sorteo_id)
-                    ->where('user_id', $compra->user_id)
-                    ->whereBetween('fecha_venta', [
-                        $compra->created_at->copy()->subMinutes(5),
-                        $compra->created_at->copy()->addMinutes(5),
-                    ])
-                    ->whereIn('estado', ['vendido', 'reservado'])
-                    ->update([
-                        'estado' => 'disponible',
-                        'user_id' => null,
-                        'fecha_venta' => null,
-                        'updated_at' => now(),
-                    ]);
             }
 
             $compra->delete();

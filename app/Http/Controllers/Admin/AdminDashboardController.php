@@ -10,36 +10,19 @@ class AdminDashboardController extends Controller
 {
     private function reconcileApprovedTicketsForSorteo(int $sorteoId): void
     {
-        \App\Models\Compra::with(['tickets:id,numero', 'user:id'])
+        \App\Models\Compra::with(['tickets:id,numero'])
             ->where('sorteo_id', $sorteoId)
             ->where('estado', 'aprobado')
             ->chunkById(100, function ($compras) use ($sorteoId) {
                 foreach ($compras as $compra) {
-                    $ticketsEsperados = collect($compra->detalles['tickets'] ?? $compra->detalles['numeros_asignados'] ?? [])
+                    $detalles = $compra->detalles ?? [];
+                    $ticketsEsperados = collect($detalles['tickets'] ?? $detalles['numeros_asignados'] ?? $detalles['numeros_manuales'] ?? [])
                         ->filter()
                         ->map(fn ($numero) => trim((string) $numero))
                         ->unique()
                         ->values();
-                    $cantidadEsperada = max((int) ($compra->detalles['cantidad'] ?? 0), $ticketsEsperados->count());
 
                     if ($ticketsEsperados->isEmpty()) {
-                        $ticketIds = $compra->tickets->pluck('id')->all();
-
-                        if ($cantidadEsperada > count($ticketIds)) {
-                            $faltantes = $cantidadEsperada - count($ticketIds);
-                            $ticketsHuerfanos = \App\Models\Ticket::where('sorteo_id', $sorteoId)
-                                ->where('user_id', $compra->user_id)
-                                ->whereIn('estado', ['vendido', 'reservado'])
-                                ->whereDoesntHave('compras')
-                                ->orderByRaw('ABS(TIMESTAMPDIFF(SECOND, COALESCE(fecha_venta, created_at), ?))', [$compra->created_at])
-                                ->limit($faltantes)
-                                ->get(['id']);
-
-                            if ($ticketsHuerfanos->isNotEmpty()) {
-                                $compra->tickets()->syncWithoutDetaching($ticketsHuerfanos->pluck('id')->all());
-                            }
-                        }
-
                         continue;
                     }
 
@@ -60,31 +43,33 @@ class AdminDashboardController extends Controller
                         if ($ticket->exists) {
                             $tieneCompraAsignada = $ticket->compras()->exists();
 
-                            if (
-                                $ticket->user_id &&
-                                (int) $ticket->user_id !== (int) $compra->user_id &&
-                                in_array($ticket->estado, ['vendido', 'reservado'], true)
-                            ) {
-                                continue;
-                            }
-
                             // Un ticket impreso sin compra asociada puede reasignarse al comprador real.
                             if (
                                 $ticket->estado === 'impreso' &&
                                 ! $tieneCompraAsignada
                             ) {
                                 $ticket->estado = 'vendido';
-                                $ticket->user_id = $compra->user_id;
+                                $ticket->participant_id = $compra->participant_id;
                                 $ticket->fecha_venta = $ticket->fecha_venta ?? $compra->created_at;
                                 $ticket->save();
 
                                 $ticketIds[] = $ticket->id;
                                 continue;
                             }
+
+                            if ($ticket->estado === 'disponible') {
+                                $ticket->estado = 'vendido';
+                                $ticket->participant_id = $compra->participant_id;
+                                $ticket->fecha_venta = $ticket->fecha_venta ?? $compra->created_at;
+                                $ticket->save();
+                            } else {
+                                $ticketIds[] = $ticket->id;
+                                continue;
+                            }
                         }
 
                         $ticket->estado = 'vendido';
-                        $ticket->user_id = $compra->user_id;
+                        $ticket->participant_id = $compra->participant_id;
                         $ticket->fecha_venta = $ticket->fecha_venta ?? $compra->created_at;
                         $ticket->save();
 
@@ -95,21 +80,7 @@ class AdminDashboardController extends Controller
                         $compra->tickets()->syncWithoutDetaching($ticketIds);
                     }
 
-                    if ($cantidadEsperada > count($ticketIds)) {
-                        $faltantes = $cantidadEsperada - count($ticketIds);
-                        $ticketsHuerfanos = \App\Models\Ticket::where('sorteo_id', $sorteoId)
-                            ->where('user_id', $compra->user_id)
-                            ->whereIn('estado', ['vendido', 'reservado'])
-                            ->whereDoesntHave('compras')
-                            ->whereNotIn('id', $ticketIds)
-                            ->orderByRaw('ABS(TIMESTAMPDIFF(SECOND, COALESCE(fecha_venta, created_at), ?))', [$compra->created_at])
-                            ->limit($faltantes)
-                            ->get(['id']);
-
-                        if ($ticketsHuerfanos->isNotEmpty()) {
-                            $compra->tickets()->syncWithoutDetaching($ticketsHuerfanos->pluck('id')->all());
-                        }
-                    }
+                    // Si no hay tickets esperados suficientes, no se intenta rellenar.
                 }
             });
     }
@@ -214,14 +185,14 @@ class AdminDashboardController extends Controller
                 });
 
             // --- Últimas 5 transacciones (globales, no afectadas por filtro)
-            $transacciones = \App\Models\Compra::with('user:id,name')
+            $transacciones = \App\Models\Compra::with('participante:id,name')
                 ->orderBy('created_at', 'desc')
                 ->take(5)
                 ->get()
                 ->map(function ($c) {
                     return [
                         'id' => $c->id,
-                        'user_name' => $c->user->name ?? 'Usuario Físico',
+                        'user_name' => $c->participante?->name ?? 'Participante',
                         'method' => $c->metodo_pago,
                         'amount' => $c->total,
                         'status' => ucfirst($c->estado),
@@ -251,11 +222,15 @@ class AdminDashboardController extends Controller
                 'efectivo' => ['amount' => $metodos['efectivo'] ?? 0, 'pct' => $totalMetodos > 0 ? round((($metodos['efectivo'] ?? 0) / $totalMetodos) * 100) : 0]
             ];
 
-            // --- Top Departamentos (Usamos COMPRAS en lugar de TICKETS para ser MUCHISIMO MÁS RÁPIDOS)
-            // Las compras almacenan el id del usuario, se une con user y contamos.
-            $compraDeptoQuery = \App\Models\Compra::join('users', 'compras.user_id', '=', 'users.id')
+            // --- Top Departamentos
+            // Contamos tickets vendidos asociados a compras aprobadas, no compras.
+            $compraDeptoQuery = \App\Models\Compra::join('participantes', 'compras.participant_id', '=', 'participantes.id')
+                ->join('compra_ticket', 'compras.id', '=', 'compra_ticket.compra_id')
+                ->join('tickets', 'compra_ticket.ticket_id', '=', 'tickets.id')
                 ->where('compras.estado', 'aprobado')
-                ->whereNotNull('users.departamento');
+                ->where('tickets.estado', 'vendido')
+                ->whereNotNull('participantes.departamento')
+                ->where('participantes.departamento', '<>', '');
             
             if ($startDate && $endDate) {
                 $compraDeptoQuery->whereBetween('compras.created_at', [$startDate, $endDate]);
@@ -264,8 +239,8 @@ class AdminDashboardController extends Controller
             }
 
             $topDeptos = $compraDeptoQuery
-                ->selectRaw('users.departamento, count(compras.id) as total')
-                ->groupBy('users.departamento')
+                ->selectRaw('participantes.departamento as departamento, count(distinct tickets.id) as total')
+                ->groupBy('participantes.departamento')
                 ->orderByDesc('total')
                 ->take(3)
                 ->get();
@@ -322,7 +297,7 @@ class AdminDashboardController extends Controller
             return [
                 'id'                  => $s->id,
                 'name'                => $s->nombre,
-                'date'                => date('d M Y', strtotime($s->fecha_fin)),
+                'date'                => date('d M Y', strtotime($s->fecha_sorteo ?? $s->fecha_fin)),
                 'type'                => $s->tipo,
                 'status'              => ucfirst($s->estado),
                 'sold'                => $s->sold ?? 0,
@@ -337,6 +312,7 @@ class AdminDashboardController extends Controller
                 'banner_promocional'  => $s->banner_promocional,
                 'fecha_inicio'        => $s->fecha_inicio,
                 'fecha_fin'           => $s->fecha_fin,
+                'fecha_sorteo'        => $s->fecha_sorteo,
                 'precio_ticket'       => $s->precio_ticket,
                 'cantidad_tickets'    => $s->cantidad_tickets,
                 'premios'             => $s->premios->map(fn($p) => [
@@ -368,12 +344,13 @@ class AdminDashboardController extends Controller
             'tipo' => 'required|string|max:255',
             'imagen_hero' => 'nullable|string',
             'banner_promocional' => 'nullable|string',
-            'descripcion' => 'nullable|string',
-            'fecha_inicio' => 'required|date',
-            'fecha_fin' => 'required|date|after:fecha_inicio',
-            'cantidad_tickets' => 'required|integer|min:1',
-            'precio_ticket' => 'required|numeric|min:0',
-            'estado' => 'required|in:borrador,programado,activo,finalizado,cancelado',
+                'descripcion' => 'nullable|string',
+                'fecha_inicio' => 'required|date',
+                'fecha_fin' => 'required|date|after:fecha_inicio',
+                'fecha_sorteo' => 'required|date|after_or_equal:fecha_fin',
+                'cantidad_tickets' => 'required|integer|min:1',
+                'precio_ticket' => 'required|numeric|min:0',
+                'estado' => 'required|in:borrador,programado,activo,finalizado,cancelado',
             'prefijo_ticket' => 'nullable|string|max:20',
             'digitos_ticket' => 'nullable|integer|min:1|max:10',
             'premios' => 'nullable|array',
@@ -413,12 +390,13 @@ class AdminDashboardController extends Controller
             'tipo' => 'required|string|max:255',
             'imagen_hero' => 'nullable|string',
             'banner_promocional' => 'nullable|string',
-            'descripcion' => 'nullable|string',
-            'fecha_inicio' => 'required|date',
-            'fecha_fin' => 'required|date|after:fecha_inicio',
-            'cantidad_tickets' => 'required|integer|min:1',
-            'precio_ticket' => 'required|numeric|min:0',
-            'estado' => 'required|in:borrador,programado,activo,finalizado,cancelado',
+                'descripcion' => 'nullable|string',
+                'fecha_inicio' => 'required|date',
+                'fecha_fin' => 'required|date|after:fecha_inicio',
+                'fecha_sorteo' => 'required|date|after_or_equal:fecha_fin',
+                'cantidad_tickets' => 'required|integer|min:1',
+                'precio_ticket' => 'required|numeric|min:0',
+                'estado' => 'required|in:borrador,programado,activo,finalizado,cancelado',
             'prefijo_ticket' => 'nullable|string|max:20',
             'digitos_ticket' => 'nullable|integer|min:1|max:10',
             'premios' => 'nullable|array',
@@ -492,17 +470,19 @@ class AdminDashboardController extends Controller
         $limit = $perPage === 'todos' ? 999999 : (int) $perPage;
 
         
-        $pendientesQuery = \App\Models\Compra::with(['user:id,name,dni', 'sorteo:id,nombre'])
+        $pendientesQuery = \App\Models\Compra::with(['sorteo:id,nombre', 'participante'])
             ->where('estado', 'pendiente');
 
         if ($search) {
             $pendientesQuery->where(function($q) use ($search) {
                 $cleanSearch = str_ireplace('COMPRA-', '', $search);
 
-                $q->whereHas('user', function($q2) use ($search) {
+                $q->whereHas('participante', function ($q2) use ($search) {
                     $q2->where('name', 'like', "%{$search}%")
                        ->orWhere('dni', 'like', "%{$search}%");
                 })
+                ->orWhere('detalles->buyer->name', 'like', "%{$search}%")
+                ->orWhere('detalles->buyer->dni', 'like', "%{$search}%")
                 ->orWhere('id', 'like', "%{$cleanSearch}%");
             });
         }
@@ -512,10 +492,17 @@ class AdminDashboardController extends Controller
             ->withQueryString();
 
         $pendientesPaginated->getCollection()->transform(function ($c) {
+                $buyer = [
+                    'name' => $c->participante?->name,
+                    'dni' => $c->participante?->dni,
+                ];
+                if (! $buyer['name'] || ! $buyer['dni']) {
+                    $buyer = $c->detalles['buyer'] ?? [];
+                }
                 return [
                     'id'             => $c->id,
-                    'user'           => $c->user?->name ?? $c->nombre ?? '—',
-                    'user_dni'       => $c->user?->dni ?? $c->dni ?? '—',
+                    'user'           => $buyer['name'] ?? '—',
+                    'user_dni'       => $buyer['dni'] ?? '—',
                     'sorteo'         => $c->sorteo?->nombre ?? '—',
                     'fecha'          => $c->created_at->format('d M Y H:i'),
                     'total'          => $c->total,
@@ -526,7 +513,7 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-        $query = \App\Models\Compra::with(['user', 'sorteo', 'tickets:id,numero'])
+        $query = \App\Models\Compra::with(['sorteo', 'tickets:id,numero', 'participante'])
             ->where('estado', 'aprobado')
             ->orderBy('created_at', 'desc');
 
@@ -535,10 +522,12 @@ class AdminDashboardController extends Controller
                 
                 $cleanSearch = str_ireplace('COMPRA-', '', $search);
 
-                $q->whereHas('user', function($q2) use ($search) {
+                $q->whereHas('participante', function ($q2) use ($search) {
                     $q2->where('name', 'like', "%{$search}%")
                        ->orWhere('dni', 'like', "%{$search}%");
                 })
+                ->orWhere('detalles->buyer->name', 'like', "%{$search}%")
+                ->orWhere('detalles->buyer->dni', 'like', "%{$search}%")
                 ->orWhere('id', 'like', "%{$cleanSearch}%")
                 ->orWhereJsonContains('detalles->numeros_manuales', $search);
             });
@@ -551,11 +540,18 @@ class AdminDashboardController extends Controller
             $ticketsRelacion = $c->tickets->pluck('numero')->values()->all();
             $ticketsDetalles = $detalles['tickets'] ?? $detalles['numeros_asignados'] ?? [];
             $detalles['tickets'] = ! empty($ticketsRelacion) ? $ticketsRelacion : $ticketsDetalles;
+            $buyer = [
+                'name' => $c->participante?->name,
+                'dni' => $c->participante?->dni,
+            ];
+            if (! $buyer['name'] || ! $buyer['dni']) {
+                $buyer = $detalles['buyer'] ?? [];
+            }
 
             return [
                 'id'             => $c->id,
-                'user'           => $c->user?->name ?? $c->nombre ?? '—',
-                'user_dni'       => $c->user?->dni ?? $c->dni ?? '—',
+                'user'           => $buyer['name'] ?? '—',
+                'user_dni'       => $buyer['dni'] ?? '—',
                 'sorteo'         => $c->sorteo?->nombre ?? '—',
                 'fecha'          => $c->created_at->format('d M Y H:i'),
                 'total'          => $c->total,
@@ -589,76 +585,156 @@ class AdminDashboardController extends Controller
         $perPage = $request->input('perPage', 25);
         $limit = $perPage === 'todos' ? 999999 : (int) $perPage;
 
-        $query = \App\Models\User::where('is_admin', false)
-            ->whereDoesntHave('roles', function ($q) {
-                $q->where('name', 'admin');
-            })
-            ->where(function ($q) {
-                $q->whereNull('email')
-                  ->orWhere('email', 'not like', '%@offline.local')
-                  ->where('email', 'not like', '%@sorteos.local');
-            });
+        $participantsQuery = \App\Models\Participante::query();
 
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $participantsQuery->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('dni', 'like', "%{$search}%")
-                  ->orWhere('telefono', 'like', "%{$search}%");
+                  ->orWhere('telefono', 'like', "%{$search}%")
+                  ->orWhere('departamento', 'like', "%{$search}%")
+                  ->orWhere('direccion', 'like', "%{$search}%");
             });
         }
 
         if ($status && $status !== 'todos') {
             if ($status === 'activos') {
-                $query->where('estado', 'activo')->orWhereNull('estado');
+                $participantsQuery->where('estado', 'activo');
             } elseif ($status === 'baneados') {
-                $query->where('estado', 'bloqueado');
+                $participantsQuery->where('estado', 'bloqueado');
             } elseif ($status === 'sin_compras') {
-                $query->doesntHave('tickets');
+                $participantsQuery->whereDoesntHave('compras');
             }
         }
 
         if ($draw && $draw !== 'todos') {
-            $query->whereHas('tickets.sorteo', function($q) use ($draw) {
+            $participantsQuery->whereHas('compras.sorteo', function ($q) use ($draw) {
                 $q->where('nombre', $draw);
             });
         }
 
-        $adminUsersPaginated = $query->with(['tickets' => function($q) {
-                $q->with('sorteo:id,nombre');
-            }])
+        $participantsPaginated = $participantsQuery
+            ->with([
+                'compras' => function ($q) {
+                    $q->select('id', 'participant_id', 'sorteo_id', 'total', 'metodo_pago', 'estado', 'detalles', 'created_at')
+                        ->latest()
+                        ->with([
+                            'sorteo:id,nombre',
+                            'tickets:id,numero',
+                        ]);
+                },
+            ])
+            ->withCount([
+                'compras',
+                'tickets as valid_tickets_count' => function ($q) {
+                    $q->whereIn('estado', ['vendido', 'reservado', 'impreso']);
+                },
+            ])
+            ->withSum([
+                'compras as approved_total_sum' => function ($q) {
+                    $q->where('estado', 'aprobado');
+                },
+            ], 'total')
             ->orderBy('created_at', 'desc')
-            ->paginate($limit)->withQueryString();
-            
-        $adminUsersPaginated->getCollection()->transform(function ($u) {
-            $draws = $u->tickets
-                ->map(fn($t) => optional($t->sorteo)->nombre)
+            ->paginate($limit)
+            ->withQueryString();
+
+        $participantsPaginated->getCollection()->transform(function ($p) {
+            $compras = $p->compras->sortByDesc('created_at')->values();
+
+            $draws = $compras
+                ->map(fn($c) => $c->sorteo?->nombre)
                 ->filter()
                 ->unique()
                 ->values()
                 ->toArray();
 
+            $purchaseHistory = $compras->map(function ($compra) {
+                $detalles = $compra->detalles ?? [];
+
+                $ticketNumbers = $compra->tickets
+                    ->pluck('numero')
+                    ->merge(collect($detalles['tickets'] ?? $detalles['numeros_asignados'] ?? $detalles['numeros_manuales'] ?? []))
+                    ->filter()
+                    ->map(fn ($numero) => trim((string) $numero))
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                return [
+                    'id' => $compra->id,
+                    'codigo' => 'TX-' . str_pad((string) $compra->id, 6, '0', STR_PAD_LEFT),
+                    'sorteo' => $compra->sorteo?->nombre ?? '—',
+                    'fecha' => optional($compra->created_at)->format('d/m/Y H:i'),
+                    'estado' => $compra->estado ?? 'pendiente',
+                    'metodoPago' => strtoupper((string) ($compra->metodo_pago ?? '—')),
+                    'total' => (float) ($compra->total ?? 0),
+                    'tickets' => $ticketNumbers,
+                    'ticketsCount' => count($ticketNumbers),
+                ];
+            })->values()->all();
+
             return [
-                'id' => $u->id,
-                'name' => $u->name,
-                'dni' => $u->dni,
-                'phone' => $u->telefono ?? '-',
-                'date' => $u->created_at->format('d M Y'),
-                'totalTickets' => $u->tickets->count(),
-                'status' => $u->estado ?? 'activo',
+                'id' => $p->id,
+                'name' => $p->name ?? '—',
+                'dni' => $p->dni ?? '—',
+                'phone' => $p->telefono ?? '-',
+                'department' => $p->departamento ?? '',
+                'address' => $p->direccion ?? '',
+                'date' => optional($p->created_at)->format('d M Y'),
+                'registeredAt' => optional($p->created_at)->format('d/m/Y H:i'),
+                'totalTickets' => (int) ($p->valid_tickets_count ?? 0),
+                'totalCompras' => (int) ($p->compras_count ?? 0),
+                'totalGastado' => (float) ($p->approved_total_sum ?? 0),
+                'lastPurchaseDate' => optional($compras->first()?->created_at)->format('d/m/Y H:i'),
+                'status' => $p->estado ?? 'activo',
                 'draws' => $draws,
+                'history' => $purchaseHistory,
             ];
         });
+
+        $adminUsersPaginated = $participantsPaginated;
 
         $sorteosList = \App\Models\Sorteo::select('id', 'nombre')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($s) => ['id' => $s->id, 'nombre' => $s->nombre]);
 
+        $participantStats = [
+            'total' => \App\Models\Participante::count(),
+            'activeWithPurchases' => \App\Models\Participante::whereHas('compras')->count(),
+            'blocked' => \App\Models\Participante::where('estado', 'bloqueado')->count(),
+        ];
+
         return Inertia::render('Admin/Usuarios', [
             'adminUsersPaginated' => $adminUsersPaginated,
             'sorteosData'    => $sorteosList,
+            'participantStats' => $participantStats,
             'filters'        => ['perPage' => $perPage]
         ]);
+    }
+
+    public function storeUsuario(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'dni' => 'required|string|size:8|unique:participantes,dni',
+            'phone' => 'nullable|string|max:20',
+            'department' => 'nullable|string|max:100',
+            'address' => 'nullable|string|max:255',
+            'status' => 'required|in:activo,bloqueado',
+        ]);
+
+        \App\Models\Participante::create([
+            'name' => $data['name'],
+            'dni' => $data['dni'],
+            'telefono' => $data['phone'] ?: null,
+            'departamento' => $data['department'] ?: null,
+            'direccion' => $data['address'] ?: null,
+            'estado' => $data['status'],
+        ]);
+
+        return redirect()->back()->with('success', 'Participante creado exitosamente.');
     }
 
     public function difusion(Request $request)
@@ -724,57 +800,53 @@ class AdminDashboardController extends Controller
 
     public function toggleUserStatus($id)
     {
-        $user = \App\Models\User::findOrFail($id);
-        
-        if ($user->canAccessAdminPanel()) {
-            return redirect()->back()->with('error', 'No puedes alterar el estado de un administrador.');
-        }
+        $participante = \App\Models\Participante::findOrFail($id);
+        $participante->estado = $participante->estado === 'activo' ? 'bloqueado' : 'activo';
+        $participante->save();
 
-        $user->estado = $user->estado === 'activo' ? 'bloqueado' : 'activo';
-        $user->save();
-
-        return redirect()->back()->with('success', 'El estado del usuario ha sido actualizado.');
+        return redirect()->back()->with('success', 'El estado del participante ha sido actualizado.');
     }
 
     public function updateUsuario(Request $request, $id)
     {
-        $user = \App\Models\User::findOrFail($id);
+        $participante = \App\Models\Participante::findOrFail($id);
         
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'dni' => 'required|string|size:8|unique:users,dni,'.$id,
-            'phone' => 'nullable|string|max:15',
+            'dni' => 'required|string|size:8|unique:participantes,dni,'.$id,
+            'phone' => 'nullable|string|max:20',
+            'department' => 'nullable|string|max:100',
+            'address' => 'nullable|string|max:255',
+            'status' => 'required|in:activo,bloqueado',
         ]);
 
-        $user->update([
+        $participante->update([
             'name' => $data['name'],
             'dni' => $data['dni'],
-            'telefono' => $data['phone']
+            'telefono' => $data['phone'] ?: null,
+            'departamento' => $data['department'] ?: null,
+            'direccion' => $data['address'] ?: null,
+            'estado' => $data['status'],
         ]);
 
-        return redirect()->back()->with('success', 'Datos del usuario actualizados exitosamente.');
+        return redirect()->back()->with('success', 'Datos del participante actualizados exitosamente.');
     }
 
     public function destroyUsuario($id)
     {
-        $user = \App\Models\User::findOrFail($id);
+        $participante = \App\Models\Participante::findOrFail($id);
 
-        if ($user->canAccessAdminPanel()) {
-            return redirect()->back()->with('error', 'No puedes eliminar un administrador.');
-        }
-
-        $comprasActivas = \App\Models\Compra::where('user_id', $id)
+        $comprasActivas = \App\Models\Compra::where('participant_id', $participante->id)
             ->whereIn('estado', ['pendiente', 'aprobado'])
             ->count();
 
         if ($comprasActivas > 0) {
-            return redirect()->back()->with('error', 'No puedes eliminar un usuario con compras activas o pendientes.');
+            return redirect()->back()->with('error', 'No puedes eliminar un participante con compras activas o pendientes.');
         }
 
-        $user->compras()->delete();
-        $user->delete();
+        $participante->delete();
 
-        return redirect()->back()->with('success', 'Usuario eliminado exitosamente.');
+        return redirect()->back()->with('success', 'Participante eliminado exitosamente.');
     }
 
     public function toggleSorteoEstado(Request $request, $id)
@@ -824,7 +896,7 @@ class AdminDashboardController extends Controller
         $path = $request->file('image')->store('sorteos', 'public');
         $url  = asset('storage/' . $path);
 
-        return response()->json(['url' => $url]);
+        return response()->json(['url' => $url, 'path' => $path]);
     }
 
     public function apiTicketsStatus($sorteoId)
@@ -852,7 +924,7 @@ class AdminDashboardController extends Controller
         $ticket = \App\Models\Ticket::where('sorteo_id', $sorteoId)
             ->whereRaw('LOWER(TRIM(estado)) IN (?, ?)', ['vendido', 'reservado'])
             ->whereNotIn('numero', $drawnNumbers)
-            ->with(['user:id,name', 'sorteo:id,nombre'])
+            ->with(['participante:id,name', 'sorteo:id,nombre'])
             ->inRandomOrder()
             ->first();
 
@@ -862,9 +934,8 @@ class AdminDashboardController extends Controller
 
         return response()->json([
             'ticket_id' => $ticket->id,
-            'user_id'   => $ticket->user_id,
             'number'    => $ticket->numero,
-            'user'      => $ticket->user ? $ticket->user->name : 'Usuario Anónimo',
+            'user'      => $ticket->participante?->name ?? 'Participante',
             'draw'      => $ticket->sorteo->nombre ?? 'Sorteo',
             'status'    => $ticket->estado
         ]);

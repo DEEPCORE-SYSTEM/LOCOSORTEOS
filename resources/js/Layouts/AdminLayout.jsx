@@ -55,7 +55,7 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
             {globalPendingTicketsCount > 0 && <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{globalPendingTicketsCount}</span>}
           </Link>
           <Link href="/admin/usuarios" className={`flex items-center gap-3 shrink-0 md:w-full text-left px-4 py-3 rounded-xl font-bold transition-colors ${currentView === 'admin-users' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-emerald-800 hover:text-white'}`}>
-            <Users className="w-5 h-5"/> <span className="inline">Usuarios Registrados</span>
+            <Users className="w-5 h-5"/> <span className="inline">Participantes</span>
           </Link>
           <Link href="/admin/ganadores" className={`flex items-center gap-3 shrink-0 md:w-full text-left px-4 py-3 rounded-xl font-bold transition-colors text-amber-300 ${currentView === 'admin-ganadores' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-emerald-800 hover:text-amber-200'}`}>
             <Award className="w-5 h-5"/> <span className="inline">Ganadores</span>
@@ -64,11 +64,7 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
             <Megaphone className="w-5 h-5"/> <span className="inline">Difusión y Contenido</span>
           </Link>
         </nav>
-        <div className="p-4 border-t border-emerald-800/50 hidden md:block">
-          <Link href="/" className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-xl font-bold hover:bg-emerald-800 hover:text-white transition-colors text-emerald-400">
-            <ArrowLeft className="w-5 h-5"/> <span>Volver a la Web</span>
-          </Link>
-        </div>
+     
       </aside>
 
       {/* Admin Main Content */}
@@ -83,7 +79,7 @@ export default function AdminLayout({ children, currentView = 'admin-dashboard' 
             {currentView === 'admin-tickets' && 'Validación de Pagos (Bouchers)'}
             {currentView === 'admin-lista-tickets' && 'Base de Datos de Tickets'}
             {currentView === 'admin-talonario' && 'Talonario y Ventas Offline'}
-            {currentView === 'admin-users' && 'Gestión de Usuarios'}
+            {currentView === 'admin-users' && 'Gestión de Participantes'}
             {currentView === 'admin-ganadores' && '🏆 Gestión de Ganadores'}
             {currentView === 'admin-difusion' && 'Canal de Difusión'}
           </h2>

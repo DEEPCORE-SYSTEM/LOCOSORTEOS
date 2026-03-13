@@ -31,6 +31,7 @@ return new class extends Migration
             $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
+            $table->boolean('is_admin')->default(false);
 
             
             $table->enum('tipo_registro', ['web', 'fisico'])->default('fisico');

@@ -4,14 +4,60 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ganador;
+use App\Models\Participante;
+use App\Models\Premio;
 use App\Models\Sorteo;
 use App\Models\Ticket;
-use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class GanadoresController extends Controller
 {
+    private function resolveWinnerBuyer(Ganador $ganador): array
+    {
+        $ticket = $ganador->ticket;
+        $participante = $ticket?->participante;
+
+        if (! $participante && $ticket) {
+            $compraConParticipante = $ticket->relationLoaded('compras')
+                ? $ticket->compras->first(fn ($compra) => $compra->participante)
+                : $ticket->compras()->with('participante:id,name,dni,telefono,departamento')->latest('compras.created_at')->first();
+
+            $participante = $compraConParticipante?->participante;
+        }
+
+        return [
+            'id' => $participante?->id,
+            'name' => $participante?->name,
+            'dni' => $participante?->dni,
+            'telefono' => $participante?->telefono,
+            'departamento' => $participante?->departamento,
+        ];
+    }
+
+    private function validateWinnerRelations(array $data, ?Ganador $ganador = null): void
+    {
+        $sorteoId = (int) ($data['sorteo_id'] ?? $ganador?->sorteo_id);
+        $ticketId = (int) ($data['ticket_id'] ?? $ganador?->ticket_id);
+        $premioId = (int) ($data['premio_id'] ?? $ganador?->premio_id);
+
+        $ticket = Ticket::findOrFail($ticketId);
+        $premio = Premio::findOrFail($premioId);
+
+        if ((int) $ticket->sorteo_id !== $sorteoId) {
+            throw ValidationException::withMessages([
+                'ticket_id' => 'El ticket seleccionado no pertenece al sorteo indicado.',
+            ]);
+        }
+
+        if ((int) $premio->sorteo_id !== $sorteoId) {
+            throw ValidationException::withMessages([
+                'premio_id' => 'El premio seleccionado no pertenece al sorteo indicado.',
+            ]);
+        }
+    }
+
     /**
      * Listado paginado de ganadores con filtros
      */
@@ -26,8 +72,13 @@ class GanadoresController extends Controller
         $query = Ganador::with([
             'sorteo:id,nombre',
             'premio:id,nombre,imagen',
-            'ticket:id,numero',
-            'user:id,name,dni,telefono',
+            'ticket:id,numero,participant_id',
+            'ticket.participante:id,name,dni,telefono,departamento',
+            'ticket.compras' => function ($q) {
+                $q->select('compras.id', 'compras.participant_id', 'compras.created_at')
+                    ->with('participante:id,name,dni,telefono,departamento')
+                    ->latest('compras.created_at');
+            },
         ])->orderBy('created_at', 'desc');
 
         if ($sorteoF && $sorteoF !== 'todos') {
@@ -40,7 +91,11 @@ class GanadoresController extends Controller
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->whereHas('user', function ($q2) use ($search) {
+                $q->whereHas('ticket.participante', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%")
+                       ->orWhere('dni', 'like', "%{$search}%");
+                })
+                ->orWhereHas('ticket.compras.participante', function ($q2) use ($search) {
                     $q2->where('name', 'like', "%{$search}%")
                        ->orWhere('dni', 'like', "%{$search}%");
                 })
@@ -53,20 +108,26 @@ class GanadoresController extends Controller
         $ganadores = $query->paginate($limit)->withQueryString();
 
         $ganadores->getCollection()->transform(function ($g) {
+            $buyer = $this->resolveWinnerBuyer($g);
+
             return [
                 'id'           => $g->id,
                 'sorteo'       => $g->sorteo?->nombre ?? '—',
                 'sorteo_id'    => $g->sorteo_id,
                 'premio'       => $g->premio?->nombre ?? '—',
+                'premio_id'    => $g->premio_id,
                 'premio_imagen'=> $g->premio?->imagen ? asset('storage/' . $g->premio->imagen) : null,
                 'ticket'       => $g->ticket?->numero ?? '—',
                 'ticket_id'    => $g->ticket_id,
-                'cliente'      => $g->user?->name ?? '—',
-                'dni'          => $g->user?->dni ?? '—',
-                'telefono'     => $g->user?->telefono ?? '—',
-                'departamento' => $g->user?->departamento ?? '—',
+                'cliente_id'   => $buyer['id'] ?? null,
+                'cliente'      => $buyer['name'] ?? '—',
+                'dni'          => $buyer['dni'] ?? '—',
+                'telefono'     => $buyer['telefono'] ?? '—',
+                'departamento' => $buyer['departamento'] ?? '—',
                 'tipo'         => $g->tipo,
                 'fecha_sorteo' => $g->fecha_sorteo?->format('d M Y'),
+                'fecha_sorteo_input' => $g->fecha_sorteo?->format('Y-m-d'),
+                'imagen_path'  => $g->imagen,
                 'imagen'       => $g->imagen ? asset('storage/' . $g->imagen) : null,
                 'destacado'    => (bool) $g->destacado,
                 'created_at'   => $g->created_at->format('d M Y'),
@@ -113,15 +174,21 @@ class GanadoresController extends Controller
             return response()->json(['error' => 'Faltan parámetros.'], 422);
         }
 
-        $user = User::where('dni', $dni)->first();
+        $participante = Participante::where('dni', $dni)->first();
 
-        if (!$user) {
+        if (! $participante) {
             return response()->json(['error' => 'No se encontró ningún cliente con ese DNI.'], 404);
         }
 
         $tickets = Ticket::where('sorteo_id', $sorteoId)
-            ->where('user_id', $user->id)
             ->whereIn('estado', ['vendido', 'reservado', 'impreso'])
+            ->where(function ($q) use ($participante) {
+                $q->where('participant_id', $participante->id)
+                    ->orWhereHas('compras', function ($q2) use ($participante) {
+                        $q2->where('participant_id', $participante->id);
+                    });
+            })
+            ->orderBy('numero')
             ->get(['id', 'numero', 'estado']);
 
         if ($tickets->isEmpty()) {
@@ -130,11 +197,11 @@ class GanadoresController extends Controller
 
         return response()->json([
             'user' => [
-                'id'           => $user->id,
-                'name'         => $user->name,
-                'dni'          => $user->dni,
-                'telefono'     => $user->telefono ?? '—',
-                'departamento' => $user->departamento ?? '—',
+                'id'           => $participante->id,
+                'name'         => $participante->name ?? '—',
+                'dni'          => $participante->dni ?? $dni,
+                'telefono'     => $participante->telefono ?? '—',
+                'departamento' => $participante->departamento ?? '—',
             ],
             'tickets' => $tickets->map(fn($t) => [
                 'id'     => $t->id,
@@ -153,7 +220,6 @@ class GanadoresController extends Controller
             'sorteo_id'    => 'required|exists:sorteos,id',
             'premio_id'    => 'required|exists:premios,id',
             'ticket_id'    => 'required|exists:tickets,id',
-            'user_id'      => 'required|exists:users,id',
             'fecha_sorteo' => 'required|date',
             'imagen'       => 'nullable|string',
             'tipo'         => 'nullable|in:manual,automatico',
@@ -161,6 +227,9 @@ class GanadoresController extends Controller
         ]);
 
         $data['tipo'] = $data['tipo'] ?? 'manual';
+        $data['imagen'] = $data['imagen'] ?: null;
+
+        $this->validateWinnerRelations($data);
 
         $ganador = Ganador::create($data);
 
@@ -174,16 +243,29 @@ class GanadoresController extends Controller
 
 
     /**
-     * Actualizar imagen de un ganador
+     * Actualizar un ganador
      */
     public function update(Request $request, $id)
     {
         $ganador = Ganador::findOrFail($id);
 
         $data = $request->validate([
+            'sorteo_id'  => 'sometimes|required|exists:sorteos,id',
+            'premio_id'  => 'sometimes|required|exists:premios,id',
+            'ticket_id'  => 'sometimes|required|exists:tickets,id',
+            'fecha_sorteo' => 'sometimes|required|date',
+            'tipo'       => 'sometimes|required|in:manual,automatico',
             'imagen'    => 'nullable|string',
             'destacado' => 'nullable|boolean',
         ]);
+
+        if (array_key_exists('imagen', $data) && ! $data['imagen']) {
+            $data['imagen'] = null;
+        }
+
+        if (! empty(array_intersect(array_keys($data), ['sorteo_id', 'premio_id', 'ticket_id']))) {
+            $this->validateWinnerRelations($data, $ganador);
+        }
 
         $ganador->update($data);
 

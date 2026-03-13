@@ -162,7 +162,6 @@ export default function Ejecucion({ sorteosData = [] }) {
           sorteo_id:    selectedSorteoData.id,
           premio_id:    execPrizeId,
           ticket_id:    drawnTicket.ticket_id,
-          user_id:      drawnTicket.user_id,
           fecha_sorteo: new Date().toISOString().slice(0, 10),
           tipo:         'automatico',
         }, {
@@ -416,7 +415,7 @@ export default function Ejecucion({ sorteosData = [] }) {
                   execDrawId ? 'bg-[#142336] border-[#1e324a]' : 'bg-white border-slate-200'
                 }`}>
                   <p className="text-amber-500 font-extrabold mb-1 uppercase tracking-widest text-xs">Resultado Extraído</p>
-                  <p className={`text-2xl font-black mb-1 leading-tight ${execDrawId ? 'text-white' : 'text-slate-800'}`}>{drawnTicket.user}</p>
+                  <p className={`text-2xl font-black mb-1 leading-tight ${execDrawId ? 'text-white' : 'text-slate-800'}`}>{drawnTicket.user || 'Participante'}</p>
                   <p className={`text-xs font-mono mb-5 ${execDrawId ? 'text-slate-400' : 'text-slate-500'}`}>Ticket #{drawnTicket.number}</p>
 
                   {execCondition === '1' || execAttempt === 3 ? (

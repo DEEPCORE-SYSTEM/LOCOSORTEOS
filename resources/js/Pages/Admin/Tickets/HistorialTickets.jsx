@@ -221,6 +221,18 @@ export default function HistorialTickets({
                     <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Método</p>
                     <p className="text-sm font-black text-slate-900 dark:text-white">{selectedTicket.metodo_pago}</p>
                   </div>
+                  {selectedTicket.detalles?.pago?.comprobante && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Comprobante</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">{selectedTicket.detalles.pago.comprobante}</p>
+                    </div>
+                  )}
+                  {selectedTicket.detalles?.pago?.monto !== undefined && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Efectivo</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">S/ {parseFloat(selectedTicket.detalles.pago.monto || 0).toFixed(2)}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Fecha</p>
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{selectedTicket.fecha}</p>

@@ -64,15 +64,19 @@ class HandleInertiaRequests extends Middleware
             'globalPendingTickets' => function () use ($request) {
                 if ($request->user() && $request->user()->canAccessAdminPanel()) {
                     return Cache::remember('global_pending_list', 60, function () {
-                        return \App\Models\Compra::with('user')
+                        return \App\Models\Compra::with('participante:id,name')
                             ->where('estado', 'pendiente')
                             ->orderBy('created_at', 'desc')
                             ->take(5)
                             ->get()
                             ->map(function($compra) {
+                                $buyer = $compra->detalles['buyer'] ?? [];
+                                $nombre = $compra->participante?->name
+                                    ?? ($buyer['name'] ?? null)
+                                    ?? 'Participante';
                                 return [
                                     'id' => $compra->id,
-                                    'user_name' => $compra->user ? $compra->user->name : 'Usuario',
+                                    'user_name' => $nombre,
                                     'total' => $compra->total,
                                     'time_ago' => $compra->created_at->diffForHumans(),
                                 ];

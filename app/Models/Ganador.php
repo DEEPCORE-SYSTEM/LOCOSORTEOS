@@ -11,7 +11,6 @@ class Ganador extends Model
     protected $fillable = [
         'premio_id',
         'ticket_id',
-        'user_id',
         'sorteo_id',
         'fecha_sorteo',
         'tipo',
@@ -32,11 +31,6 @@ class Ganador extends Model
     public function ticket()
     {
         return $this->belongsTo(Ticket::class);
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
     }
 
     public function premio()

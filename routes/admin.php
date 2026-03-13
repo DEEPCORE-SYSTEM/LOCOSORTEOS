@@ -44,6 +44,7 @@ Route::middleware(['role:admin'])->group(function () {
 
     
     Route::get('/usuarios',                     [\App\Http\Controllers\Admin\AdminDashboardController::class, 'usuarios'])->name('admin.usuarios');
+    Route::post('/usuarios',                    [\App\Http\Controllers\Admin\AdminDashboardController::class, 'storeUsuario'])->name('admin.usuarios.store');
     Route::put('/usuarios/{id}',                [\App\Http\Controllers\Admin\AdminDashboardController::class, 'updateUsuario'])->name('admin.usuarios.update');
     Route::post('/usuarios/{id}/toggle-status', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'toggleUserStatus'])->name('admin.usuarios.toggle_status');
     Route::delete('/usuarios/{id}',             [\App\Http\Controllers\Admin\AdminDashboardController::class, 'destroyUsuario'])->name('admin.usuarios.destroy');

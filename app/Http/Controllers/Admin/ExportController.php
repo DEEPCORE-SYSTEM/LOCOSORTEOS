@@ -22,12 +22,16 @@ class ExportController extends Controller
         $sorteo = Sorteo::findOrFail($sorteo_id);
 
         
-        $tickets = Ticket::with(['user:id,name'])
+        $tickets = Ticket::with(['participante:id,name'])
             ->where('sorteo_id', $sorteo_id)
             ->where('estado', 'vendido')
             ->orderBy('numero', 'asc')
-            ->select('id', 'numero', 'user_id', 'sorteo_id')
+            ->select('id', 'numero', 'sorteo_id')
             ->get();
+
+        $tickets->each(function ($t) {
+            $t->buyer_name = $t->participante?->name ?? 'N/A';
+        });
 
         
         $chunks = $tickets->chunk(50);
@@ -42,7 +46,7 @@ class ExportController extends Controller
     {
         $search = trim((string) $request->query('search', ''));
 
-        $query = Compra::with(['user', 'sorteo', 'tickets:id,numero'])
+        $query = Compra::with(['sorteo', 'tickets:id,numero', 'participante'])
             ->where('estado', 'aprobado')
             ->orderBy('created_at', 'desc');
 
@@ -50,10 +54,12 @@ class ExportController extends Controller
             $query->where(function ($q) use ($search) {
                 $cleanSearch = str_ireplace('COMPRA-', '', $search);
 
-                $q->whereHas('user', function ($q2) use ($search) {
+                $q->whereHas('participante', function ($q2) use ($search) {
                     $q2->where('name', 'like', "%{$search}%")
-                        ->orWhere('dni', 'like', "%{$search}%");
+                       ->orWhere('dni', 'like', "%{$search}%");
                 })
+                ->orWhere('detalles->buyer->name', 'like', "%{$search}%")
+                ->orWhere('detalles->buyer->dni', 'like', "%{$search}%")
                 ->orWhere('id', 'like', "%{$cleanSearch}%")
                 ->orWhereJsonContains('detalles->numeros_manuales', $search);
             });
@@ -79,14 +85,21 @@ class ExportController extends Controller
             $query->chunk(500, function ($compras) use ($handle) {
                 foreach ($compras as $compra) {
                     $detalles = $compra->detalles ?? [];
+                    $buyer = [
+                        'name' => $compra->participante?->name,
+                        'dni' => $compra->participante?->dni,
+                    ];
+                    if (! $buyer['name'] || ! $buyer['dni']) {
+                        $buyer = $detalles['buyer'] ?? [];
+                    }
                     $ticketsRelacion = $compra->tickets->pluck('numero')->values()->all();
                     $ticketsDetalles = $detalles['tickets'] ?? $detalles['numeros_asignados'] ?? [];
                     $tickets = ! empty($ticketsRelacion) ? $ticketsRelacion : $ticketsDetalles;
 
                     fputcsv($handle, [
                         'COMPRA-' . $compra->id,
-                        $compra->user?->name ?? $compra->nombre ?? '—',
-                        $compra->user?->dni ?? $compra->dni ?? '—',
+                        $buyer['name'] ?? '—',
+                        $buyer['dni'] ?? '—',
                         $compra->sorteo?->nombre ?? '—',
                         implode(', ', $tickets),
                         number_format((float) $compra->total, 2, '.', ''),

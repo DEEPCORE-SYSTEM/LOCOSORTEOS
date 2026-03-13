@@ -8,9 +8,9 @@ class Ticket extends Model
 {
     protected $fillable = [
         'sorteo_id',
+        'participant_id',
         'numero',
         'estado',
-        'user_id',
         'fecha_venta'
     ];
 
@@ -19,9 +19,9 @@ class Ticket extends Model
         return $this->belongsTo(Sorteo::class);
     }
 
-    public function user()
+    public function participante()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Participante::class, 'participant_id');
     }
 
     public function compras()

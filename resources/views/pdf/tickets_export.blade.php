@@ -36,7 +36,7 @@
         @foreach ($pageTickets as $t)
             <div class="ticket">
                 <div class="number">{{ $t->numero }}</div>
-                <div class="user-name">{{ $t->user->name ?? 'N/A' }}</div>
+                <div class="user-name">{{ $t->buyer_name ?? 'N/A' }}</div>
             </div>
         @endforeach
     </div>

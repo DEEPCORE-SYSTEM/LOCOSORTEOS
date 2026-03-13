@@ -8,7 +8,10 @@ import ThemeToggle from '../Components/ThemeToggle';
 
 export default function PublicLayout({ children, isLoggedIn = false, currentUser = null }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { settings = {} } = usePage().props;
+  const page = usePage();
+  const { settings = {} } = page.props;
+  const currentUrl = page.url || '';
+  const isCheckoutPage = currentUrl === '/participar' || currentUrl.startsWith('/participar?');
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 pb-20 md:pb-0 transition-colors duration-300">
@@ -26,7 +29,7 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
 
           {/* Menú Desktop */}
           <nav className="hidden lg:flex items-center gap-5 font-bold text-sm text-slate-600 dark:text-slate-300">
-            <Link href="/dashboard" className="flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition">
+            <Link href="/mis-tickets" className="flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition">
               <Ticket className="w-4 h-4" /> Mis Tickets
             </Link>
             <Link href="/difusion" className="flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition">
@@ -40,24 +43,7 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
                <ThemeToggle />
             </div>
            
-            {isLoggedIn ? (
-              <div className="flex items-center gap-3 ml-2 border-l border-slate-200 pl-4">
-                <span className="text-emerald-700 font-black flex items-center gap-2">
-                  <div className="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  {currentUser?.name?.split(' ')[0] || 'Hola'}
-                </span>
-                <Link href="/logout" method="post" as="button" className="flex items-center gap-1.5 text-red-500 hover:text-red-700 transition bg-red-50 px-3 py-1.5 rounded-full">
-                  <LogOut className="w-4 h-4" /> Salir
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 ml-2 border-l border-slate-200 pl-4">
-                <Link href="/login" className="text-slate-600 hover:text-emerald-600 transition">Ingresar</Link>
-                <Link href="/register" className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition shadow-sm border-b-2 border-emerald-800">Crear Cuenta</Link>
-              </div>
-            )}
+  
           </nav>
 
             {/* Menú Hamburguesa Mobile */}
@@ -87,7 +73,7 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
                </div>
             )}
             
-            <Link href="/dashboard" className="w-full text-left flex items-center gap-2 font-bold text-slate-700"><Ticket className="w-5 h-5"/> Mis Tickets</Link>
+            <Link href="/mis-tickets" className="w-full text-left flex items-center gap-2 font-bold text-slate-700"><Ticket className="w-5 h-5"/> Mis Tickets</Link>
             <Link href="/difusion" className="w-full text-left flex items-center gap-2 font-bold text-slate-700"><Megaphone className="w-5 h-5"/> Canal Difusión</Link>
             <Link href="/ganadores" className="w-full text-left flex items-center gap-2 font-bold text-slate-700"><Trophy className="w-5 h-5 text-amber-500"/> Ganadores</Link>
           
@@ -96,9 +82,10 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
                 <LogOut className="w-5 h-5" /> Cerrar Sesión
               </Link>
             ) : (
-              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-100">
-                <Link href="/login" className="text-center font-bold text-slate-600 bg-slate-50 py-3 rounded-xl border border-slate-200">Ingresar</Link>
-                <Link href="/register" className="text-center font-bold text-white bg-emerald-600 py-3 rounded-xl shadow-sm border-b-2 border-emerald-800">Crear Cuenta</Link>
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <Link href="/mis-tickets" className="block text-center font-bold text-white bg-emerald-600 py-3 rounded-xl shadow-sm border-b-2 border-emerald-800">
+                  Mis Tickets
+                </Link>
               </div>
             )}
           </div>
@@ -133,7 +120,7 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
           <div>
             <h4 className="text-slate-900 font-bold uppercase mb-4 tracking-wider text-xs">Enlaces Rápidos</h4>
             <ul className="space-y-3 font-medium">
-              <li><Link href="/dashboard" className="hover:text-emerald-600 transition">Ver Mis Tickets</Link></li>
+              <li><Link href="/mis-tickets" className="hover:text-emerald-600 transition">Ver Mis Tickets</Link></li>
               <li><Link href="/difusion" className="hover:text-emerald-600 transition">Canal de Difusión</Link></li>
               <li><Link href="/ganadores" className="hover:text-emerald-600 transition">Ganadores</Link></li>
             </ul>
@@ -181,11 +168,13 @@ export default function PublicLayout({ children, isLoggedIn = false, currentUser
       </div>
 
       {/* MOBILE STICKY CTA BOTÓN */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-50 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
-        <Link href="/dashboard" className="w-full bg-[#25D366] text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_4px_0_#1DA851] active:shadow-none active:translate-y-1 transition-all">
-          <Ticket className="w-6 h-6" /> ¡Comprar Ticket!
-        </Link>
-      </div>
+      {!isCheckoutPage && (
+        <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-50 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
+          <a href="/participar" className="w-full bg-[#25D366] text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_4px_0_#1DA851] active:shadow-none active:translate-y-1 transition-all">
+            <Ticket className="w-6 h-6" /> ¡Comprar Ticket!
+          </a>
+        </div>
+      )}
     </div>
   );
 }

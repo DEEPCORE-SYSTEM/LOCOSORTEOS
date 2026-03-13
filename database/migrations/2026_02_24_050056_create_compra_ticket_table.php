@@ -17,6 +17,8 @@ public function up(): void
         $table->foreignId('compra_id')->constrained()->onDelete('cascade');
         $table->foreignId('ticket_id')->constrained()->onDelete('cascade');
 
+        $table->unique(['compra_id', 'ticket_id'], 'compra_ticket_compra_ticket_unique');
+
         $table->timestamps();
     });
 }

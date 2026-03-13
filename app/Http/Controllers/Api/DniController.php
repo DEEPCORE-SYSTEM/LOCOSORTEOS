@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Models\Participante;
 
 class DniController extends Controller
 {
@@ -18,22 +19,29 @@ class DniController extends Controller
         ]);
 
         $dni   = $request->input('dni');
+        $preferRemote = $request->boolean('prefer_remote', false);
 
-        // 1. Verificar primero en la base de datos local
-        $userLocal = \App\Models\User::where('dni', $dni)->first();
-        if ($userLocal) {
-            $ultimaCompra = \App\Models\Compra::where('user_id', $userLocal->id)->latest()->first();
-            $provinciaDistrito = $ultimaCompra->detalles['provincia_distrito'] ?? '';
+        // 1. Verificar primero en la base de datos local (si no se fuerza remoto).
+        if (! $preferRemote) {
+            $participante = Participante::where('dni', $dni)->first();
+            if ($participante) {
+                $ultimaCompra = \App\Models\Compra::where('participant_id', $participante->id)
+                ->latest()
+                ->first();
 
-            return response()->json([
-                'success' => true,
-                'nombre'  => $userLocal->name,
-                'telefono' => $userLocal->telefono !== '000000000' && $userLocal->telefono !== '-' ? $userLocal->telefono : '',
-                'departamento' => $userLocal->departamento ?? '',
-                'direccion' => $userLocal->direccion ?? '',
-                'provincia_distrito' => $provinciaDistrito,
-                'source'  => 'local'
-            ]);
+                $buyer = $ultimaCompra?->detalles['buyer'] ?? [];
+                $provinciaDistrito = $buyer['provincia_distrito'] ?? '';
+
+                return response()->json([
+                    'success' => true,
+                    'nombre'  => $participante->name ?? ($buyer['name'] ?? ''),
+                    'telefono' => $participante->telefono ?? ($buyer['telefono'] ?? ''),
+                    'departamento' => $participante->departamento ?? ($buyer['departamento'] ?? ''),
+                    'direccion' => $participante->direccion ?? ($buyer['direccion'] ?? ''),
+                    'provincia_distrito' => $provinciaDistrito,
+                    'source'  => 'local'
+                ]);
+            }
         }
 
         // 2. Si no existe, proceder con la consulta a RENIEC
@@ -45,7 +53,6 @@ class DniController extends Controller
 
         try {
             $response = Http::withToken($token)
-                ->withoutVerifying()
                 ->get('https://api.decolecta.com/v1/reniec/dni', [
                     'numero' => $dni,
                 ]);

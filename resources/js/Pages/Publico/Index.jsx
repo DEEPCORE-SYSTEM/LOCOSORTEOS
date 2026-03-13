@@ -100,8 +100,8 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
 
       {/* ── BANNER DEL SORTEO ── */}
       <div className="relative overflow-hidden bg-emerald-950 py-10 md:py-14">
-        {sorteo.imagen_hero && (
-          <img src={sorteo.imagen_hero} alt={sorteo.nombre} className="absolute inset-0 w-full h-full object-cover opacity-20" />
+        {(sorteo.imagen_hero_url || sorteo.imagen_hero) && (
+          <img src={sorteo.imagen_hero_url || sorteo.imagen_hero} alt={sorteo.nombre} className="absolute inset-0 w-full h-full object-cover opacity-20" />
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-950/80 to-emerald-900/70" />
         <div className="container mx-auto px-4 max-w-6xl relative z-10">
@@ -199,8 +199,8 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {sorteo.premios.map((premio, i) => (
                     <div key={i} className="bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-100 dark:border-slate-600 overflow-hidden text-center p-3 transition-colors duration-300">
-                      {premio.imagen && (
-                        <img src={premio.imagen} alt={premio.nombre} className="w-full h-20 object-cover rounded-lg mb-2" />
+                      {(premio.imagen_url || premio.imagen) && (
+                        <img src={premio.imagen_url || premio.imagen} alt={premio.nombre} className="w-full h-20 object-cover rounded-lg mb-2" />
                       )}
                       <p className="font-black text-slate-800 dark:text-slate-200 text-sm">{premio.nombre}</p>
                       {(parseInt(premio.cantidad, 10) || 1) > 1 && (
@@ -261,9 +261,9 @@ export default function Index({ sorteo, tickets: initialTickets, auth, user, set
               {!isLoggedIn ? (
                 <div className="p-6 text-center">
                   <Info className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-                  <p className="font-bold text-slate-700 dark:text-slate-300 mb-4">Debes iniciar sesión para comprar</p>
-                  <a href="/login" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
-                    <Ticket className="w-5 h-5" /> Iniciar Sesión para Comprar
+                  <p className="font-bold text-slate-700 dark:text-slate-300 mb-4">Continúa al checkout para comprar</p>
+                  <a href="/participar" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                    <Ticket className="w-5 h-5" /> Ir al Checkout
                   </a>
                 </div>
               ) : (

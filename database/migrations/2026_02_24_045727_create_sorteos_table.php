@@ -18,16 +18,19 @@ public function up(): void
         $table->string('nombre');
         $table->string('tipo')->default('General'); 
         $table->string('imagen_hero')->nullable();  
+        $table->string('banner_promocional')->nullable();
         $table->text('descripcion')->nullable();
         $table->dateTime('fecha_inicio');
         $table->dateTime('fecha_fin');
 
         
         $table->integer('cantidad_tickets'); 
+        $table->string('prefijo_ticket', 20)->nullable();
+        $table->unsignedTinyInteger('digitos_ticket')->default(3);
         $table->decimal('precio_ticket', 10, 2);
 
         
-        $table->enum('estado', ['programado', 'activo', 'finalizado', 'cancelado'])
+        $table->enum('estado', ['borrador', 'programado', 'activo', 'finalizado', 'cancelado'])
               ->default('programado');
 
         

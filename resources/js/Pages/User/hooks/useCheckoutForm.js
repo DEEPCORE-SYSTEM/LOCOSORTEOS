@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { validateCheckout } from '../utils/validateCheckout';
 
 /**
  * Encapsula toda la lógica de estado y handlers del formulario de checkout.
  */
-export function useCheckoutForm({ sorteo, ticketPrice }) {
+export function useCheckoutForm({ sorteo, ticketPrice, currentUser, defaultPaymentMethod = '' }) {
+  const safeUser = currentUser?.is_admin ? null : currentUser;
   const [previewUrl, setPreviewUrl] = useState(null);
 
   const { data, setData, post, processing, errors, reset } = useForm({
@@ -13,7 +14,12 @@ export function useCheckoutForm({ sorteo, ticketPrice }) {
     cantidad:              1,
     modo_seleccion:        'random',
     numeros_seleccionados: [],
-    metodo_pago:           '',
+    buyer_dni:             safeUser?.dni || '',
+    buyer_name:            safeUser?.name || '',
+    buyer_telefono:        safeUser?.telefono || '',
+    buyer_departamento:    safeUser?.departamento || '',
+    accept_terms:          false,
+    metodo_pago:           defaultPaymentMethod,
     comprobante:           null,
     total:                 ticketPrice,
   });
@@ -26,6 +32,26 @@ export function useCheckoutForm({ sorteo, ticketPrice }) {
       numeros_seleccionados: [],
     }));
   }, [sorteo?.id, ticketPrice]);
+
+  useEffect(() => {
+    if (!safeUser) return;
+    setData((prev) => ({
+      ...prev,
+      buyer_dni: safeUser?.dni || prev.buyer_dni,
+      buyer_name: safeUser?.name || prev.buyer_name,
+      buyer_telefono: safeUser?.telefono || prev.buyer_telefono,
+      buyer_departamento: safeUser?.departamento || prev.buyer_departamento,
+    }));
+  }, [safeUser?.dni, safeUser?.name, safeUser?.telefono, safeUser?.departamento]);
+
+  useEffect(() => {
+    if (!defaultPaymentMethod) return;
+
+    setData((prev) => ({
+      ...prev,
+      metodo_pago: prev.metodo_pago || defaultPaymentMethod,
+    }));
+  }, [defaultPaymentMethod]);
 
   const handleIncreaseQty = () => {
     if (data.cantidad < 10) {
@@ -65,16 +91,20 @@ export function useCheckoutForm({ sorteo, ticketPrice }) {
     }
   };
 
-  const handleCheckoutSubmit = (e, onSuccess) => {
+  const handleCheckoutSubmit = (e) => {
     e.preventDefault();
     const error = validateCheckout(data);
     if (error) { alert(error); return; }
+    const buyerDni = String(data.buyer_dni || '').replace(/\D/g, '');
 
     post('/comprar', {
+      forceFormData: true,
       onSuccess: () => {
         reset();
         setPreviewUrl(null);
-        onSuccess?.();
+        if (buyerDni.length === 8) {
+          router.get(route('mis_tickets'), { dni: buyerDni }, { replace: true });
+        }
       },
     });
   };
@@ -82,7 +112,14 @@ export function useCheckoutForm({ sorteo, ticketPrice }) {
   const resetForm = () => {
     reset();
     setPreviewUrl(null);
-    setData(prev => ({ ...prev, cantidad: 1, numeros_seleccionados: [], modo_seleccion: 'random', total: ticketPrice }));
+    setData(prev => ({
+      ...prev,
+      cantidad: 1,
+      numeros_seleccionados: [],
+      modo_seleccion: 'random',
+      total: ticketPrice,
+      accept_terms: false,
+    }));
   };
 
   return {
