@@ -199,11 +199,11 @@ export default function CheckoutView({
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Cantidad de Tickets</label>
                     <div className="flex items-center justify-between gap-4 bg-white border-2 border-slate-200 rounded-xl p-1.5 w-full">
-                      <button type="button" onClick={handleDecreaseQty} className="w-12 h-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-bold transition-colors">
+                      <button type="button" onClick={handleDecreaseQty} className="w-12 h-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-bold transition-colors touch-manipulation">
                         <Minus className="w-5 h-5" />
                       </button>
                       <span className="text-center font-black text-xl">{data.cantidad}</span>
-                      <button type="button" onClick={handleIncreaseQty} className="w-12 h-10 flex items-center justify-center bg-emerald-100 hover:bg-emerald-200 rounded-lg text-emerald-700 font-bold transition-colors">
+                      <button type="button" onClick={handleIncreaseQty} className="w-12 h-10 flex items-center justify-center bg-emerald-100 hover:bg-emerald-200 rounded-lg text-emerald-700 font-bold transition-colors touch-manipulation">
                         <Plus className="w-5 h-5" />
                       </button>
                     </div>
@@ -268,7 +268,7 @@ export default function CheckoutView({
                                 className={`py-2 px-1 rounded-lg font-bold text-[10px] sm:text-xs md:text-sm border-2 transition-all break-all leading-tight
                                   ${isVendido  ? 'bg-red-100 text-red-400 border-red-100 cursor-not-allowed opacity-60'
                                   : isSelected ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-105'
-                                  :              'bg-white text-slate-600 border-slate-200 hover:border-emerald-400 hover:shadow-sm'}`}
+                                  :              'bg-white text-slate-600 border-slate-200 hover:border-emerald-400 hover:shadow-sm'} touch-manipulation`}
                               >
                                 {ticket.numero}
                               </button>
@@ -356,7 +356,10 @@ export default function CheckoutView({
                         <input
                           type="text"
                           value={data.buyer_dni}
-                          onChange={(e) => setData('buyer_dni', e.target.value.replace(/\\D/g, '').slice(0, 8))}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          pattern="[0-9]*"
+                          onChange={(e) => setData('buyer_dni', e.target.value.replace(/\D/g, '').slice(0, 8))}
                           className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-mono font-bold tracking-widest text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
                           placeholder="72345678"
                           required
@@ -390,9 +393,11 @@ export default function CheckoutView({
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-2">Celular *</label>
                       <input
-                        type="text"
+                        type="tel"
                         value={data.buyer_telefono}
-                        onChange={(e) => setData('buyer_telefono', e.target.value.replace(/\\D/g, '').slice(0, 20))}
+                        inputMode="tel"
+                        autoComplete="tel"
+                        onChange={(e) => setData('buyer_telefono', e.target.value.replace(/\D/g, '').slice(0, 20))}
                         className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-bold text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
                         placeholder="987654321"
                         required
@@ -429,13 +434,7 @@ export default function CheckoutView({
             {/* ── Paso 3: Pago ─────────────────────────────────────────── */}
             <div>
               <StepTitle number={3} label="Realiza el pago" />
-              {paymentOptions.length === 1 && (
-                <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                  <p className="text-sm font-bold text-emerald-800">
-                    Metodo de pago seleccionado automaticamente: <span className="font-black uppercase">{defaultPaymentMethod}</span>
-                  </p>
-                </div>
-              )}
+              
 
               {paymentOptions.length === 0 && (
                 <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">

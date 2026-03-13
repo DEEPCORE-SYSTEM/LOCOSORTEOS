@@ -362,6 +362,15 @@ class AdminDashboardController extends Controller
         ]);
         
         $data['user_id'] = auth()->id() ?? 1;
+        $data['premios'] = collect($data['premios'] ?? [])
+            ->map(function (array $premio) {
+                $premio['tipo'] = filled($premio['tipo'] ?? null)
+                    ? $premio['tipo']
+                    : ($premio['nombre'] ?? null);
+
+                return $premio;
+            })
+            ->all();
 
         $sorteo = \App\Models\Sorteo::create(\Illuminate\Support\Arr::except($data, ['premios']));
 
@@ -406,6 +415,16 @@ class AdminDashboardController extends Controller
             'premios.*.imagen' => 'nullable|string',
             'premios.*.orden' => 'required|integer',
         ]);
+
+        $data['premios'] = collect($data['premios'] ?? [])
+            ->map(function (array $premio) {
+                $premio['tipo'] = filled($premio['tipo'] ?? null)
+                    ? $premio['tipo']
+                    : ($premio['nombre'] ?? null);
+
+                return $premio;
+            })
+            ->all();
 
         $sorteo->update(\Illuminate\Support\Arr::except($data, ['premios']));
 

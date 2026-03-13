@@ -56,7 +56,8 @@ export function useCheckoutForm({ sorteo, ticketPrice, currentUser, defaultPayme
   const handleIncreaseQty = () => {
     if (data.cantidad < 10) {
       const newQty = data.cantidad + 1;
-      setData(prev => ({ ...prev, cantidad: newQty, total: newQty * ticketPrice }));
+      setData('cantidad', newQty);
+      setData('total', newQty * ticketPrice);
     }
   };
 
@@ -64,7 +65,9 @@ export function useCheckoutForm({ sorteo, ticketPrice, currentUser, defaultPayme
     if (data.cantidad > 1) {
       const newQty = data.cantidad - 1;
       const nums   = data.numeros_seleccionados.slice(0, newQty);
-      setData(prev => ({ ...prev, cantidad: newQty, numeros_seleccionados: nums, total: newQty * ticketPrice }));
+      setData('cantidad', newQty);
+      setData('numeros_seleccionados', nums);
+      setData('total', newQty * ticketPrice);
     }
   };
 

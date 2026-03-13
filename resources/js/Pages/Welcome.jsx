@@ -121,24 +121,43 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
       return () => window.cancelAnimationFrame(rafId);
     }, [grandWinners.length, isWinnersPaused]);
 
-  const prizes = sorteo?.premios?.map(p => ({
-    id: p.id, 
-    qty: p.cantidad, 
-    name: p.nombre, 
-    type: p.tipo, 
+  const getPrizeCategory = (prize) => {
+    const source = String(prize.type || prize.name || '').trim().toLowerCase();
+
+    if (['vehiculo', 'vehículo', 'auto', 'camioneta', 'pick-up', 'pickup', 'motocicleta', 'moto'].some((term) => source.includes(term))) {
+      return 'vehiculos';
+    }
+
+    if (['efectivo', 'dinero', 'cash'].some((term) => source.includes(term))) {
+      return 'efectivo';
+    }
+
+    if (['tecnologia', 'tecnología', 'smartphone', 'electronica', 'electrónica', 'celular', 'laptop', 'tablet'].some((term) => source.includes(term))) {
+      return 'tecnologia';
+    }
+
+    return 'otros';
+  };
+
+  const prizes = sorteo?.premios?.map((p) => ({
+    id: p.id,
+    qty: parseInt(p.cantidad, 10) || 1,
+    name: p.nombre,
+    title: p.descripcion || p.nombre,
+    type: p.tipo || p.nombre,
     image: p.imagen_url || p.imagen || 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&q=80&w=600'
   })) || [];
 
-    const totalPrizesCount = prizes.reduce((acc, curr) => acc + parseInt(curr.qty || 1), 0);
+    const totalPrizesCount = prizes.reduce((acc, curr) => acc + curr.qty, 0);
     
-    const vehiculosCount = prizes.filter(p => ['Auto', 'Camioneta', 'Pick-up', 'Motocicleta'].includes(p.type))
-                                .reduce((acc, curr) => acc + parseInt(curr.qty || 1), 0);
+    const vehiculosCount = prizes.filter((p) => getPrizeCategory(p) === 'vehiculos')
+                                .reduce((acc, curr) => acc + curr.qty, 0);
     
-    const efectivoCount = prizes.filter(p => p.type === 'Efectivo')
-                                .reduce((acc, curr) => acc + parseInt(curr.qty || 1), 0);
+    const efectivoCount = prizes.filter((p) => getPrizeCategory(p) === 'efectivo')
+                                .reduce((acc, curr) => acc + curr.qty, 0);
                                 
-    const tecnologiaCount = prizes.filter(p => ['Tecnología', 'Smartphone'].includes(p.type))
-                                  .reduce((acc, curr) => acc + parseInt(curr.qty || 1), 0);
+    const tecnologiaCount = prizes.filter((p) => getPrizeCategory(p) === 'tecnologia')
+                                  .reduce((acc, curr) => acc + curr.qty, 0);
 
     const { auth, settings } = usePage().props;
 
@@ -394,7 +413,7 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
                     <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-700">
                       <img 
                         src={prize.image} 
-                        alt={prize.name} 
+                        alt={prize.title} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -406,7 +425,7 @@ export default function Welcome({ sorteo, otrosSorteos = [], ganadores = [] }) {
                     
                     <div className="p-4 text-center">
                       <h3 className="font-black text-slate-800 dark:text-slate-200 text-sm md:text-base leading-tight mb-1">
-                        {prize.name}
+                        {prize.title}
                       </h3>
                       <p className="text-[10px] md:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-900/30 inline-block px-2 py-1 rounded-md">
                         {prize.type}
